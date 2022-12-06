@@ -1,4 +1,6 @@
 process GET_SAMPLE_ID_BAM {
+    label 'small_on_local'
+    
     input:
     tuple path(bam_file), path(bam_index)
 
@@ -10,11 +12,13 @@ process GET_SAMPLE_ID_BAM {
     script:
     """
     samtools view -H $bam_file \
-        | grep "@RG" | cut -f6 | sed 's/SM://' | sort -u
+        | grep "@RG" | cut -f6 | sed 's/SM://' | sort -u | tr -d '\\n'
     """
 }
 
 process GET_SAMPLE_ID_VCF {
+    label 'small_on_local'
+
     input:
     tuple path(vcf_file), path(vcf_index)
 
@@ -25,6 +29,6 @@ process GET_SAMPLE_ID_VCF {
 
     script:
     """
-    zgrep -m1 "#CHROM" $vcf_file | cut -f10
+    zgrep -m1 "#CHROM" $vcf_file | cut -f10 | tr -d '\\n'
     """
 }

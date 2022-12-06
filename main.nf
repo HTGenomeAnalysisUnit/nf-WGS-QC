@@ -45,14 +45,13 @@ workflow {
     }
 
     // Get sample IDs from BAM if available otherwise from VCF files
-    header_channel = Channel.of("internal_id\texternal_id")
     if (params.bamfiles) {
         ext2int_map_ch = GET_SAMPLE_ID_BAM.out.id_map
-            .collect {it.join("\t")}
+            .map { "${it.join('\t')}" }
             .collectFile(name: "${outdir}/ext2int_map.tsv", newLine: true)
     } else if (params.vcffiles) {
         ext2int_map_ch = GET_SAMPLE_ID_VCF.out.id_map
-            .collect {it.join("\t")}
+            .map { "${it.join('\t')}" }
             .collectFile(name: "${outdir}/ext2int_map.tsv", newLine: true)
     }
 

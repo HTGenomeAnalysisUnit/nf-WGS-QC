@@ -1,4 +1,5 @@
 process MAKE_PED {
+    label 'small_on_local'
     publishDir "${params.outdir}", mode: 'copy'
     
     input:
@@ -10,6 +11,6 @@ process MAKE_PED {
 
     script:
     """
-    ./make_ped.py $project_metadata $ext2int_ids_map
+    make_ped.py $project_metadata $ext2int_ids_map
     """
 }
