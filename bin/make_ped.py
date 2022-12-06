@@ -24,7 +24,7 @@ sid_map = sid_map_table_df.set_index('internal_id')['external_id'].to_dict()
 project_df['Sample_ID'] = project_df['Sample_ID'].map(sid_map)
 
 # Replace all 0 values in the "sex" column with 2
-project_df['sex'].replace(0, 2, inplace=True)
+project_df['Sex'].replace(0, 2, inplace=True)
 
 # Create a dummy ped file with sex information
 new_df = pd.DataFrame({
