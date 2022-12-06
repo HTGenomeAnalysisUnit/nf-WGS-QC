@@ -1,0 +1,38 @@
+mosdepth_config:
+  general_stats_coverage_hidden:
+  - 20
+  - 30
+  - 200
+  exclude_contigs:
+    - "*_alt"
+    - "*_decoy"
+    - "*_random"
+    - "chrUn*"
+    - "HLA*"
+    - "chrEBV"
+  
+table_cond_formatting_rules:
+  mqc-generalstats-mosdepth-10_x_pc:
+    pass:
+      - gt: 85
+      - eq: 85
+    warn:
+      - lt: 85
+    fail:
+      - lt: 80
+  mqc-generalstats-mosdepth-median_coverage:
+    pass:
+      - gt: 20
+      - eq: 20
+    warn:
+      - lt: 20
+    fail:
+      - lt: 15
+  mqc-generalstats-samtools-mapped_passed:
+    pass:
+      - gt: 450
+      - eq: 450
+    warn:
+      - lt: 450
+    fail:
+      - lt: 340
