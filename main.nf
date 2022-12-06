@@ -49,11 +49,11 @@ workflow {
     if (params.bamfiles) {
         ext2int_map_ch = GET_SAMPLE_ID_BAM.out.id_map
             .collect {it.join("\t")}
-            .collectFile(name: "${project_outdir}/ext2int_map.tsv", newLine: true)
+            .collectFile(name: "${outdir}/ext2int_map.tsv", newLine: true)
     } else if (params.vcffiles) {
         ext2int_map_ch = GET_SAMPLE_ID_VCF.out.id_map
             .collect {it.join("\t")}
-            .collectFile(name: "${project_outdir}/ext2int_map.tsv", newLine: true)
+            .collectFile(name: "${outdir}/ext2int_map.tsv", newLine: true)
     }
 
     // Generate a PED file from sample IDs if one is not provided
