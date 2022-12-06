@@ -19,40 +19,39 @@ workflow {
     bam files   : ${params.bamfiles ? params.vcffiles : "NO BAM files"}
     VCF files   : ${params.vcffiles ? params.vcffiles : "NO VCF files"}
     VCF index   : ${params.vcf_index_type}
+    project metadata : ${params.project_metadata}
     mode        : ${params.mode}
     ped_file    : ${params.ped_file ? params.ped_file : "imputed"}
     genome      : ${params.genome}
-    regions     : ${params.regions}
-    outdir      : ${params.outdir}
+    ${params.regions ? "regions: ${params.regions}" : ''}
+    outdir      : ${outdir}
     =============================================
     """
     .stripIndent()
 
-    project_metadata = file(params.project_metadata, checkIfExists: true)
-
     // Set input files channels
     //bamfiles/vcffiles is a glob of multiple files
     if (params.bamfiles) {
-        bamfiles = Channel
+        bam_files = Channel
             .fromPath(params.bamfiles, checkIfExists: true)
             .map { tuple(it, file("${it}.bai", checkIfExists: true)) }
+        GET_SAMPLE_ID_BAM(bam_files)
     }
     if (params.vcffiles) {
         vcf_files = Channel
             .fromPath(params.vcffiles, checkIfExists: true)
             .map{ tuple(it, file("${it}.${params.vcf_index_type}", checkIfExists: true)) }
+        GET_SAMPLE_ID_VCF(vcf_files)
     }
 
     // Get sample IDs from BAM if available otherwise from VCF files
     header_channel = Channel.of("internal_id\texternal_id")
     if (params.bamfiles) {
-        GET_SAMPLE_ID_BAM(bam_files)
         ext2int_map_ch = GET_SAMPLE_ID_BAM.out.id_map
             .collect {it.join("\t")}
             .collectFile(name: "${project_outdir}/ext2int_map.tsv", newLine: true)
     } else if (params.vcffiles) {
-        GET_SAMPLE_ID_VCF(bam_files)
-        ext2int_map_ch = GET_SAMPLE_ID_BAM.out.id_map
+        ext2int_map_ch = GET_SAMPLE_ID_VCF.out.id_map
             .collect {it.join("\t")}
             .collectFile(name: "${project_outdir}/ext2int_map.tsv", newLine: true)
     }
@@ -61,6 +60,7 @@ workflow {
     if (params.ped_file) {
         ped_file = file(params.ped_file)
     } else {
+        project_metadata = file(params.project_metadata, checkIfExists: true)
         MAKE_PED(project_metadata, ext2int_map_ch)
         ped_file = MAKE_PED.out
     }
@@ -91,7 +91,7 @@ workflow {
     if (params.vcffiles) {
         vars_qc_input_ch = vcf_files.combine(somalier_ancestry)
         annotation_zip_file = file(params.af_annotation_zip, checkIfExists: true)
-        RUN_VARIANTS_QC(vcf_files, somalier_ancestry, annotation_zip_file)
+        RUN_VARIANTS_QC(GET_SAMPLE_ID_VCF.out.vcf_files, somalier_ancestry, annotation_zip_file)
     }
 }
 

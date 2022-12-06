@@ -19,7 +19,7 @@ process GET_SAMPLE_ID_VCF {
     tuple path(vcf_file), path(vcf_index)
 
     output:
-    tuple stdout, path(vcf_file), path(vcf_index)
+    tuple stdout, path(vcf_file), path(vcf_index), emit: vcf_files
     tuple val(vcf_file.simpleName), stdout, emit: id_map
     //internal_id, external_id
 
