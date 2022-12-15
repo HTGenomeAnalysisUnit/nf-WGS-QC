@@ -7,10 +7,10 @@ workflow VCF_CONTAMINATION {
         BCFTOOLS_FILTER_NORM(vcf_files)
         ANNOTATE_AF(BCFTOOLS_FILTER_NORM.out, annotation_zip)
         COMPUTE_CHARR(ANNOTATE_AF.out)
-        CONCAT_STATS(COMPUTE_CHARR.out.tsv_stats.collect())
+        //CONCAT_STATS(COMPUTE_CHARR.out.tsv_stats.collect())
 
     emit:
-        tsv_stats = CONCAT_STATS.out
+        tsv_stats = COMPUTE_CHARR.out
 }
 
 process BCFTOOLS_FILTER_NORM {
@@ -49,6 +49,7 @@ process ANNOTATE_AF {
 
 process COMPUTE_CHARR {
     label 'singlethread'
+    publishDir "${params.outdir}", mode: 'copy'
 
     input:
     tuple val(sample), file(vcf_file), file(vcf_index)
@@ -62,6 +63,7 @@ process COMPUTE_CHARR {
     """
 }
 
+/*
 process CONCAT_STATS {
     label 'singlethread'
     publishDir "${params.outdir}", mode: 'copy'
@@ -82,3 +84,4 @@ process CONCAT_STATS {
     done
     """
 }
+*/

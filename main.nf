@@ -8,7 +8,6 @@ outdir_vars = "${outdir}/qc_variants"
 
 include { RUN_ALIGNEMENTS_QC } from "${projectDir}/workflows/qc_alignments" addParams( outdir: "${outdir_align}")
 include { RUN_VARIANTS_QC } from "${projectDir}/workflows/qc_variants" addParams( outdir: "${outdir_vars}")
-include { MAKE_PED }  from "${projectDir}/modules/make_ped" addParams( outdir: "${outdir}")
 include { GET_SAMPLE_ID_BAM; GET_SAMPLE_ID_VCF } from "${projectDir}/modules/get_sample_id"
 
 workflow {
@@ -19,9 +18,7 @@ workflow {
     bam files   : ${params.bamfiles ? params.vcffiles : "NO BAM files"}
     VCF files   : ${params.vcffiles ? params.vcffiles : "NO VCF files"}
     VCF index   : ${params.vcf_index_type}
-    project metadata : ${params.project_metadata}
     mode        : ${params.mode}
-    ped_file    : ${params.ped_file ? params.ped_file : "imputed"}
     genome      : ${params.genome}
     ${params.regions ? "regions: ${params.regions}" : ''}
     outdir      : ${outdir}
@@ -33,65 +30,54 @@ workflow {
     //bamfiles/vcffiles is a glob of multiple files
     if (params.bamfiles) {
         bam_files = Channel
-            .fromPath(params.bamfiles, checkIfExists: true)
-            .map { tuple(it, file("${it}.bai", checkIfExists: true)) }
+            .watchPath(params.bamfiles)
+            .map { tuple(it, file("${it}.bai")) }
         GET_SAMPLE_ID_BAM(bam_files)
     }
     if (params.vcffiles) {
         vcf_files = Channel
-            .fromPath(params.vcffiles, checkIfExists: true)
-            .map{ tuple(it, file("${it}.${params.vcf_index_type}", checkIfExists: true)) }
+            .watchPath(params.vcffiles)
+            .map{ tuple(it, file("${it}.${params.vcf_index_type}")) }
         GET_SAMPLE_ID_VCF(vcf_files)
     }
 
     // Get sample IDs from BAM if available otherwise from VCF files
     if (params.bamfiles) {
+        manifest_bam = file("${outdir}/ext2int_map_bam.tsv")
         ext2int_map_ch = GET_SAMPLE_ID_BAM.out.id_map
             .map { "${it.join('\t')}" }
-            .collectFile(name: "${outdir}/ext2int_map.tsv", newLine: true)
-    } else if (params.vcffiles) {
+            .subscribe { manifest_bam.append("$it\n") }
+            //.collectFile(name: "${outdir}/ext2int_map_bam.tsv", newLine: true)
+    }
+    if (params.vcffiles) {
+        manifest_vcf = file("${outdir}/ext2int_map_vcf.tsv")
         ext2int_map_ch = GET_SAMPLE_ID_VCF.out.id_map
             .map { "${it.join('\t')}" }
-            .collectFile(name: "${outdir}/ext2int_map.tsv", newLine: true)
-    }
-
-    // Generate a PED file from sample IDs if one is not provided
-    if (params.ped_file) {
-        ped_file = file(params.ped_file)
-    } else {
-        project_metadata = file(params.project_metadata, checkIfExists: true)
-        MAKE_PED(project_metadata, ext2int_map_ch)
-        ped_file = MAKE_PED.out
+            .subscribe { manifest_vcf.append("$it\n") }
+            //.collectFile(name: "${outdir}/ext2int_map_vcf.tsv", newLine: true)
     }
 
     //Perform the QC on BAMs and/or VCFs
     if (params.bamfiles) {
         checkPathParamList = [
-                params.somalier_vars, params.somalier_labels, 
-                params.somalier_1kgdata, params.ped_file, params.genome,
-                "${params.genome}.fai"
+                params.somalier_vars, params.genome, "${params.genome}.fai"
                 ]
             for (param in checkPathParamList) { if (param) { file(param, checkIfExists: true) } }
         
-        fastp_files = params.fastp_json ? Channel.fromPath(params.fastp) : Channel.empty()
-        samblaster_files = params.samblaster_log ? Channel.fromPath(params.samblaster) : Channel.empty()
         somalier_varset = file(params.somalier_vars)
-        somalier_labels = file(params.somalier_labels)
-        somalier_1kgdata = file(params.somalier_1kgdata)
         genome_ref = tuple(file(params.genome), file("${params.genome}.fai"))
 
-        RUN_ALIGNEMENTS_QC(GET_SAMPLE_ID_BAM.out.bam_files, fastp_files, samblaster_files, params.regions, somalier_varset, somalier_labels, somalier_1kgdata, ped_file, genome_ref) 
-
-        somalier_ancestry = RUN_ALIGNEMENTS_QC.out.somalier_ancestry
-    } else {
-        somalier_ancestry = file('noancestry')
-    }
+        RUN_ALIGNEMENTS_QC(GET_SAMPLE_ID_BAM.out.bam_files, params.regions, somalier_varset, genome_ref) 
+    } 
 
     if (params.vcffiles) {
-        vars_qc_input_ch = vcf_files.combine(somalier_ancestry)
         annotation_zip_file = file(params.af_annotation_zip, checkIfExists: true)
-        RUN_VARIANTS_QC(GET_SAMPLE_ID_VCF.out.vcf_files, somalier_ancestry, annotation_zip_file)
+        RUN_VARIANTS_QC(GET_SAMPLE_ID_VCF.out.vcf_files, annotation_zip_file)
     }
+}
+
+workflow MAKE_REPORTS {
+    
 }
 
 workflow.onComplete { 

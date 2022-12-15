@@ -1,19 +1,7 @@
-workflow READSTATS {
-    take:
-        bam_files
-
-    main:
-        COMPUTE_READSTATS(bam_files)
-        CONCAT_READSTATS(COMPUTE_READSTATS.out.tsv_stats.collect())
-
-    emit:
-        gc_stats = COMPUTE_READSTATS.out.gc_stats
-        tsv_stats = CONCAT_READSTATS.out
-}
-
 process COMPUTE_READSTATS {
     label 'singlethread'
-    publishDir "${params.outdir}", mode: 'copy', pattern: '*.GC_stats.tsv', saveAs: { filename -> "GC_stats/${sample}.GC_stats.tsv" }
+    publishDir "${params.outdir}", mode: 'copy', pattern: "${sample}.GC_stats/${sample}.GC_stats.tsv", saveAs: { filename -> "GC_stats/${sample}.GC_stats.tsv" }
+    publishDir "${params.outdir}", mode: 'copy', pattern: '*.tsv'
 
     input:
     tuple val(sample), file(bam_file), file(bai_file)
@@ -28,6 +16,7 @@ process COMPUTE_READSTATS {
     """
 }
 
+/*
 process CONCAT_READSTATS {
     label 'singlethread'
     publishDir "${params.outdir}", mode: 'copy'
@@ -55,3 +44,4 @@ process CONCAT_READSTATS {
     done
     """
 }
+*/

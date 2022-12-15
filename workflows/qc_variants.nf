@@ -7,22 +7,15 @@ output_reports = file("${params.outdir}/reports")
 
 include { BCFTOOLS_STATS } from "${projectDir}/modules/bcftools" addParams( outdir: "${output_stats}")
 include { BCFTOOLS_IDX_STATS } from "${projectDir}/modules/bcftools" addParams( outdir: "${output_stats}")
-include { QC_RMD_SMALLVARS } from "${projectDir}/modules/qc_rmd_smallvars" addParams( outdir: "${output_reports}")
 include { VCF_CONTAMINATION } from "${projectDir}/modules/vcf_contamination" addParams( outdir: "${output_contamination}")
 
 workflow RUN_VARIANTS_QC {
     take:
         vcf_files // [sample, file.vcf.gz, file.vcf.gz.{tbi,csi}]
-        somalier_ancestry // use file('noancestry') if you have not ancestry data 
         annotation_zip // zip file of gnomad for echtvar annotation
 
     main:
         VCF_CONTAMINATION(vcf_files, annotation_zip)
         BCFTOOLS_STATS(vcf_files)
         BCFTOOLS_IDX_STATS(vcf_files)
-        report_input_ch = BCFTOOLS_STATS.out.join(BCFTOOLS_IDX_STATS.out)
-        QC_RMD_SMALLVARS(report_input_ch, somalier_ancestry)
-
-    emit:
-        QC_RMD_SMALLVARS.out
 }

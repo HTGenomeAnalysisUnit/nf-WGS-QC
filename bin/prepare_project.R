@@ -409,14 +409,24 @@ read_samtools_flagstats <- function(path, group_name) {
 }
 
 read_readstats <- function(path, group_name) {
-  dt <- fread(paste0(path, "/per_sample_readstats.tsv"), header=T)
-  setnames(dt,"SAMPLE","sample")
-  dt$group <- group_name
-  return(dt)
+  res_dt <- NULL
+  files <- list.files(path, pattern="\\.rundetails\\.tsv")
+  for (f in files) {
+    dt <- fread(paste0(path, "/", f), header=T)
+    setnames(dt,"SAMPLE","sample")
+    res_dt <- rbind(res_dt, dt)
+  }
+  res_dt$group <- group_name
+  return(res_dt)
 }
 
 read_samples_per_run <- function(path, group_name) {
-  dt <- fread(paste0(path, "/per_sample_seqruns.tsv"), header=T)
+  dt <- NULL
+  files <- list.files(path, pattern="\\.per_sample_run\\.tsv")
+  for (f in files) {
+    tmp_dt <- fread(paste0(path, "/", f), header=T)
+    dt <- rbind(dt, tmp_dt)
+  }
   sxrun <- dt[, .(samples_per_run = length(unique(SAMPLE)), id=paste(INSTRUMENT, RUN, sep="_")), by = .(INSTRUMENT, RUN)]
   sxflow <- dt[, .(samples_per_flowcell = length(unique(SAMPLE)), id=paste(INSTRUMENT, RUN, FLOWCELL, sep="_")), by = .(INSTRUMENT, RUN, FLOWCELL)]
   sxlane <- dt[, .(samples_per_lane = length(unique(SAMPLE)), id=paste(INSTRUMENT, RUN, FLOWCELL, LANE, sep="_")), by = .(INSTRUMENT, RUN, FLOWCELL, LANE)]
@@ -430,7 +440,12 @@ read_samples_per_run <- function(path, group_name) {
 }
 
 read_runs_per_sample <- function(path, group_name) {
-  dt <- fread(paste0(path, "/per_sample_seqruns.tsv"), header=T)
+  dt <- NULL
+  files <- list.files(path, pattern="\\.per_sample_run\\.tsv")
+  for (f in files) {
+    tmp_dt <- fread(paste0(path, "/", f), header=T)
+    dt <- rbind(dt, tmp_dt)
+  }
   runxs <- unique(dt[, .(SAMPLE, INSTRUMENT, RUN)])[, .(runs_per_sample = .N), by = .(SAMPLE)]
   flowxs <- unique(dt[, .(SAMPLE, INSTRUMENT, RUN, FLOWCELL)])[, .(flowcells_per_sample = .N), by = .(SAMPLE)]
   lanexs <- dt[, .(lanes_per_sample = .N), by = .(SAMPLE)]
