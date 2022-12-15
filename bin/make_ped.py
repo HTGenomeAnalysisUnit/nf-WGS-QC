@@ -20,22 +20,22 @@ sid_map_table_df = pd.read_csv(sid_map_file, sep='\t', names = ['internal_id', '
 sid_map = sid_map_table_df.set_index('internal_id')['external_id'].to_dict()
 
 # If any sample from the dictionary is not found in the metadata raise an error
-if not project_df['Sample_ID'].isin(sid_map.keys()).all():
-    raise ValueError("Some of the sample IDs from BAM/VCF were not found in the Sample_ID column in metadata")
+if not project_df['WGS_id'].isin(sid_map.keys()).all():
+    raise ValueError("Some of the sample IDs from BAM/VCF were not found in the WGS_id column in metadata")
 
 # Use the dictionary to convert the values in the "Sample_ID" column of project_df
 # to the new external ids from the dictionary
 # retain only samples present in the dictionary
-project_df = project_df[project_df['Sample_ID'].isin(sid_map.keys())]
-project_df['Sample_ID'] = project_df['Sample_ID'].map(sid_map)
+project_df = project_df[project_df['WGS_id'].isin(sid_map.keys())]
+project_df['WGS_id'] = project_df['WGS_id'].map(sid_map)
 
 # Replace all 0 values in the "sex" column with 2
 project_df['Sex'].replace(0, 2, inplace=True)
 
 # Create a dummy ped file with sex information
 new_df = pd.DataFrame({
-    'FID': project_df['Sample_ID'],
-    'IID': project_df['Sample_ID'],
+    'FID': project_df['WGS_id'],
+    'IID': project_df['WGS_id'],
     'father_id': 0,
     'mother_id': 0,
     'sex': project_df['Sex'],

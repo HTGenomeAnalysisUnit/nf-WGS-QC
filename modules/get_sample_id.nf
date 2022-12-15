@@ -12,7 +12,7 @@ process GET_SAMPLE_ID_BAM {
     script:
     """
     samtools view -H $bam_file \
-        | grep "@RG" | cut -f6 | sed 's/SM://' | sort -u | tr -d '\\n'
+        | grep "@RG" | tr "\\t" "\\n" | grep "SM:" | sed 's/SM://' | sort -u | tr -d '\\n'
     """
 }
 

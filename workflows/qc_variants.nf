@@ -1,14 +1,14 @@
 nextflow.enable.dsl=2
 
 // params.outdir = "QC/variants", output folder for QC files */
-
+output_contamination = file("${params.outdir}/contamination_stats")
 output_stats = file("${params.outdir}/variant_stats")
 output_reports = file("${params.outdir}/reports")
 
 include { BCFTOOLS_STATS } from "${projectDir}/modules/bcftools" addParams( outdir: "${output_stats}")
 include { BCFTOOLS_IDX_STATS } from "${projectDir}/modules/bcftools" addParams( outdir: "${output_stats}")
 include { QC_RMD_SMALLVARS } from "${projectDir}/modules/qc_rmd_smallvars" addParams( outdir: "${output_reports}")
-include { VCF_CONTAMINATION } from "${projectDir}/modules/vcf_contamination" addParams( outdir: "${output_stats}")
+include { VCF_CONTAMINATION } from "${projectDir}/modules/vcf_contamination" addParams( outdir: "${output_contamination}")
 
 workflow RUN_VARIANTS_QC {
     take:
