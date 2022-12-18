@@ -1,5 +1,5 @@
 process PREPARE_SUMMARY {
-    publishDir "${params.summary_output}", mode: 'move'
+    publishDir "${params.summary_output}", mode: 'copy'
     
     input:
         file(qc_data)
@@ -14,6 +14,7 @@ process PREPARE_SUMMARY {
         file("project_qc_summary.tsv")
         file("qc_align.RDS")
         file("qc_vars.RDS")
+        file("prepare_summary.log")
 
     script:
     def align_filters_opt = align_filters.name == 'NO_FILE' ? '' : "--align_filters $align_filters"
@@ -35,5 +36,7 @@ process PREPARE_SUMMARY {
         $align_rds_opt \
         $force_update_opt \
         $update_app_opt
+    
+    cp .command.log prepare_summary.log
     """
 }

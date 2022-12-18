@@ -155,10 +155,13 @@ readVCFstat <- function(stat_file, sep="\t", fileID=FALSE) {
 }
 
 read_contig_vars <- function(path, contigs) {
+  message("### Processing contig count data ###")
+  message("### Path: ", path)
   res <- list(by_sample=list(), all_samples=NULL)
   
   files <- list.files(path, pattern = "varsPerContig.tsv")
   for (f in files) {
+    message("Processing ", f)
     sample_name <- gsub("\\.varsPerContig\\.tsv","", f)
     dt <- fread(paste0(path, "/", f), header=F, col.names=c("contig","size","n_vars"))
     idx <- which(dt$contig %in% contigs)
@@ -172,10 +175,14 @@ read_contig_vars <- function(path, contigs) {
 }
 
 read_stats_vars <- function(path, minDP, minQUAL) {
+  message("### Processing vars stats data ###")
+  message("### Path: ", path)
+  
   res <- list(by_sample=list(), DP=NULL, QUAL=NULL, summary=NULL)
   
   files <- list.files(path, pattern = "vars.stats")
   for (f in files) {
+    message("Processing ", f)
     sample_name <- gsub("\\.vars\\.stats","", f)
     sdata <- readVCFstat(paste0(path, "/", f), fileID = sample_name)
     res$by_sample[[sample_name]] <- sdata
@@ -243,16 +250,18 @@ read_stats_vars <- function(path, minDP, minQUAL) {
 }
 
 read_contamination_data <- function(path) {  
+  message("### Processing contamination data ###")
+  message("### Path: ", path)
+  
+  cont_res <- NULL
   files <- list.files(path, pattern = "cont.tsv")
   for (f in files) {
+    message("Processing ", f)
     dt <- fread(paste0(path, "/", f), header=T, check.names=T)
     setnames(dt, "X.SAMPLE", "sample")
-    charr_stats <- list(mean=mean(dt$CHARR), sd=sd(dt$CHARR))
-    het_rate_stats <- list(mean=mean(dt$HETEROZYGOSITY_RATE), sd=sd(dt$HETEROZYGOSITY_RATE))
-    dt$charr_sd_from_mean <- round(abs(dt$CHARR - charr_stats$mean) / charr_stats$sd, 3)
-    dt$hetrate_sd_from_mean <- round(abs(dt$CHARR - het_rate_stats$mean) / het_rate_stats$sd, 3)
+    cont_res <- rbind(cont_res, dt)
   }
-  return(dt)
+  return(cont_res)
 }
 
 read_vars_QC <- function(project_id, data_path, minDP, minQUAL, by_tranche=T, previous_rds=NA, force_update=F) {
@@ -314,12 +323,21 @@ read_vars_QC <- function(project_id, data_path, minDP, minQUAL, by_tranche=T, pr
 
     list_of_dt <- list(
       stats[[t]]$summary,
-      contamination[[t]][,.(sample, CHARR, HETEROZYGOSITY_RATE,charr_sd_from_mean,hetrate_sd_from_mean)]
+      contamination[[t]][,.(sample, CHARR, HETEROZYGOSITY_RATE)]
     )
     merged_dt <- merge_tables(list_of_dt)
+    
+    #Compute charr mean / sd / deviation across the tranche
+    charr_stats <- list(mean=mean(merged_dt$CHARR), sd=sd(merged_dt$CHARR))
+    het_rate_stats <- list(mean=mean(merged_dt$HETEROZYGOSITY_RATE), sd=sd(merged_dt$HETEROZYGOSITY_RATE))
+    merged_dt$charr_sd_from_mean <- round(abs(merged_dt$CHARR - charr_stats$mean) / charr_stats$sd, 3)
+    merged_dt$hetrate_sd_from_mean <- round(abs(merged_dt$HETEROZYGOSITY_RATE - het_rate_stats$mean) / het_rate_stats$sd, 3)
+    
+    #Add the group tag and rbind
     merged_dt$group <- t
     summary_qc <- rbind(summary_qc, merged_dt)
   }
+  message("### VARS QC PROCESSING COMPLETE ###")
   
   return(list(stats=stats, vars_per_contig=vars_per_contig, summary_qc=summary_qc, contamination=contamination))
 }
@@ -365,6 +383,7 @@ read_mosdepth <- function(path, canonical_chrs, group_name, minCov) {
   
   meancov_dt <- NULL
   summary_path <- paste0(path, "/summary")
+  message("### Path: ", summary_path)
   files <- list.files(summary_path, pattern="*.summary.txt")
   for (f in files) {
     message("Processing ", f)
@@ -384,8 +403,11 @@ read_mosdepth <- function(path, canonical_chrs, group_name, minCov) {
 
 read_samtools_idxstats <- function(path, canonical_chrs, group_name, decoy_string="decoy") {
   res_dt <- NULL
+  message("### Processing samtools idxstats data ###")
+  message("### Path: ", path)
   files <- list.files(path, pattern="\\.idxstat")
   for (f in files) {
+    message("Processing ", f)
     sample_name <- gsub("\\.idxstat","",f)
     dt <- fread(paste0(path, "/", f), header=F, 
                 col.names=c("contig","size","n_mapped","n_unmapped"))
@@ -409,8 +431,11 @@ read_samtools_idxstats <- function(path, canonical_chrs, group_name, decoy_strin
 
 read_samtools_flagstats <- function(path, group_name) {
   res_dt <- NULL
+  message("### Processing samtools flagstats data ###")
+  message("### Path: ", path)
   files <- list.files(path, pattern="\\.flagstat")
   for (f in files) {
+    message("Processing ", f)
     sample_name <- gsub("\\.flagstat","",f)
     raw <- read.csv(paste0(path, "/", f), header=F, sep="+")
     values <- raw$V1
@@ -425,8 +450,11 @@ read_samtools_flagstats <- function(path, group_name) {
 
 read_readstats <- function(path, group_name) {
   res_dt <- NULL
+  message("### Processing readstats data ###")
+  message("### Path: ", path)
   files <- list.files(path, pattern="\\.per_sample_run\\.tsv")
   for (f in files) {
+    message("Processing ", f)
     dt <- fread(paste0(path, "/", f), header=T)
     setnames(dt,"SAMPLE","sample")
     res_dt <- rbind(res_dt, dt)
@@ -476,18 +504,23 @@ read_runs_per_sample <- function(path, group_name) {
 }
 
 read_somalier <- function(path, group_name) {
+  message("### Processing somalier data ###")
+  message("### Path: ", path)
+  message("Processing ", paste0(path, "/",group_name, ".pairs.tsv"))
   pairs_dt <- fread(paste0(path, "/",group_name, ".pairs.tsv"), header=T)
   setnames(pairs_dt, "#sample_a", "sample_a")
   pairs_dt$group <- group_name
-  samples_dt <- fread(paste0(path, "/",group_name, ".samples.tsv"), header=T, 
+  samples_dt <- fread(paste0(path, "/", group_name, ".samples.tsv"), header=T, 
                       select=c("sample_id","original_pedigree_sex","X_depth_mean","Y_depth_mean","n_hom_ref","n_het","n_hom_alt"))
   samples_dt$group <- group_name
   setnames(samples_dt, "sample_id", "sample")
-  ancestry_dt <- fread(paste0(group_name, ".somalier-ancestry.tsv"), header=T)
+  message("Processing ", paste0(path, "/", group_name, ".somalier-ancestry.tsv"))
+  ancestry_dt <- fread(paste0(path,"/", group_name, ".somalier-ancestry.tsv"), header=T)
   ancestry_dt$group <- group_name
   ancestry_dt$given_ancestry[ancestry_dt$given_ancestry == ""] <- "External_sample"
   setnames(ancestry_dt, "#sample_id", "sample")
   
+  message("Find related pairs")
   related_pairs <- pairs_dt[relatedness >= 0.5]
   related_pairs_a <- related_pairs %>% group_by(sample_a) %>% summarise(r_a = paste(unique(sample_b), collapse=","))
   related_pairs_b <- related_pairs %>% group_by(sample_b) %>% summarise(r_b = paste(unique(sample_a), collapse=","))
@@ -570,7 +603,8 @@ read_alignment_QC <- function(project_id, data_path, somalier_path, canonical_ch
     )
     somalier[[t]] <- read_somalier(somalier_path, t)
 
-    # Compile summary aling QC table from single metrics tables
+    # Compile summary align QC table from single metrics tables
+    message("### Create summary QC table ###")
     r_per_sample_wide <- as.data.table(readstats[[t]]$r_per_sample[, !"group"] %>% 
       pivot_wider(names_from = "metric", values_from = "n"))
     list_of_dt <- list(coverage[[t]]$summarycov[, !"group"], 
@@ -591,7 +625,7 @@ read_alignment_QC <- function(project_id, data_path, somalier_path, canonical_ch
     # Make a summary table for sequencing run setup
     sequencing_setup <- rbind(sequencing_setup,readstats[[t]]$s_per_run)
   }
-
+  message("### ALIGN QC PROCESSING COMPLETE ###")
   return(
     list(
       coverage=coverage, 
@@ -659,45 +693,61 @@ if (!dir.exists(project_dir)) {
 }
 
 # Read alignements QC and apply filters -------------
-message("Reading align QC data...")
+message("###############################")
+message("###  ALIGN QC DATA PROCESS  ###")
+message("###############################")
 qc_align_data <- read_alignment_QC(p,project_dir, somalier_dir, canonical_chrs, min_cov, by_tranche, previous_var_rds, force_update)
 qc_align_data$summary_qc$QC_pass_status <- "NOT_APPLIED"
 
+message("### APPLY VARS FILTERS IF ANY ###")
 qc_align_data$summary_qc <- evaluate_filters(qc_align_data$summary_qc, align_filters)
 
+message("### SAVE ALIGN QC REPORTS ###")
 saveRDS(qc_align_data, file = paste0(project_dir,"/qc_align.RDS"))
 save_tsv(qc_align_data$summary_qc, paste0(project_dir,"/qc_align_summary.tsv"))
 
 # Read variants QC and apply filters -------------
-message("Reading variants QC data...")
+message("###############################")
+message("###  VARS QC DATA PROCESS   ###")
+message("###############################")
 qc_vars_data <- read_vars_QC(p,project_dir, min_cov, min_qual, by_tranche, previous_var_rds, force_update)
 qc_vars_data$summary_qc$QC_pass_status <- "NOT_APPLIED"
 
+message("### APPLY VARS FILTERS IF ANY ###")
 qc_vars_data$summary_qc <- evaluate_filters(qc_vars_data$summary_qc, var_filters)
 
+message("### SAVE VARS QC REPORTS ###")
 saveRDS(qc_vars_data, file = paste0(project_dir,"/qc_vars.RDS"))
 save_tsv(qc_vars_data$summary_qc, paste0(project_dir,"/qc_vars_summary.tsv"))
 
+message("###############################")
+message("###  MAKE PROJECT SUMMARY   ###")
+message("###############################")
 qc_align_merge <- qc_align_data$summary_qc %>% select(sample,group,QC_pass_status)
 qc_vars_merge <- qc_vars_data$summary_qc %>% select(sample,QC_pass_status)
 setnames(qc_align_merge, "QC_pass_status", "align_pass_status")
 setnames(qc_vars_merge, "QC_pass_status", "vars_pass_status")
 qc_merged <- merge(qc_align_merge, qc_vars_merge, by="sample", all.x=T)
-qc_merged %>% mutate(pass_status=ifelse(align_pass_status == "FAIL" | vars_pass_status == "FAIL", "FAIL", "PASS"))
+qc_merged <- qc_merged %>% mutate(pass_status=ifelse(align_pass_status == "FAIL" | vars_pass_status == "FAIL", "FAIL", "PASS"))
 
 qc_merged_counts <- qc_merged %>% group_by(group) %>%
   summarise(n_samples=n(), n_pass=sum(pass_status == "PASS"), n_fail=sum(pass_status == "FAIL")) %>%
   mutate(fraction_fail=n_fail/n_samples)
-qc_merged_counts <- c("total", 
-  sum(qc_merged_counts$n_samples),
-  sum(qc_merged_counts$n_pass),
-  sum(qc_merged_counts$n_fail),
-  sum(qc_merged_counts$n_fail)/sum(qc_merged_counts$n_samples))
+qc_merged_counts <- qc_merged_counts %>% add_row(
+    group = "total", 
+    n_samples = sum(qc_merged_counts$n_samples),
+    n_pass = sum(qc_merged_counts$n_pass),
+    n_fail = sum(qc_merged_counts$n_fail),
+    fraction_fail = sum(qc_merged_counts$n_fail)/sum(qc_merged_counts$n_samples)
+  )
+qc_merged_counts
 save_tsv(qc_merged_counts, paste0(project_dir,"/project_qc_summary.tsv"))
 
 # Update shiny app data if requested ------------
 if (opt$update_app) {
-  message("Update app data")
+  message("#########################")
+  message("###  UPDATE APP DATA  ###")
+  message("#########################")
   app_project_dir = paste0(app_dir,"/data/",project_name)
   dir.create(app_project_dir,recursive = T)
   file.copy(paste0(project_dir,"/qc_align.RDS"),paste0(app_project_dir, "/qc_align.RDS"),overwrite = T)
@@ -707,7 +757,7 @@ if (opt$update_app) {
   server = Sys.getenv("RSCONNECT_SERVER")
   key = Sys.getenv("RSCONNECT_APIKEY")
   connectApiUser(account = "deploy_account", apiKey = key, quiet = FALSE, server=server)
-  deployApp(appName=app_name, account="deploy_account", logLevel="normal",upload=T)
+  deployApp(appDir=app_dir, appName=app_name, account="deploy_account", logLevel="normal",upload=T)
 }
 
-message("All done!")
+message("### All done! ###")

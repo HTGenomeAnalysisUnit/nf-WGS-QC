@@ -52,7 +52,7 @@ outdir: publish dir
 */
 process SOMALIER_RELATE {
     label 'singlethread'
-    publishDir "${params.reportdir}/${tranche_name}/qc_alignment/somalier", mode: 'copy', pattern: '*.tsv'
+    publishDir "${params.reportdir}/${tranche_name}", mode: 'copy', pattern: '*.tsv'
     publishDir "${params.reportdir}/${tranche_name}", mode: 'copy', pattern: '*.html', saveAs: { filename -> "${tranche_name}.somalier-relate.html"}
     
     input:
@@ -88,7 +88,7 @@ outdir: publish dir
 */
 process SOMALIER_ANCESTRY {
     label 'singlethread'
-    publishDir "${params.reportdir}/${tranche_name}/qc_alignment/somalier", mode: 'copy', pattern: '*.tsv'
+    publishDir "${params.reportdir}/${tranche_name}", mode: 'copy', pattern: '*.tsv'
     publishDir "${params.reportdir}/${tranche_name}", mode: 'copy', pattern: '*.html'
     
     input:

@@ -21,4 +21,9 @@ Male = 1
     ```
 
 3. Use the `MAKE_REPORTS` entrypoint to generate reports given the tranches data
+
+    ```bash
+    nextflow run ../main.nf -profile ht_cluster -entry MAKE_REPORTS -c make_reports.conf
+    ```
+
 4. Finally, merge VCF files from a tranche and generate variants report per tranche by running the Rmd report template
