@@ -52,20 +52,20 @@ outdir: publish dir
 */
 process SOMALIER_RELATE {
     label 'singlethread'
-    publishDir "${params.outdir}", mode: 'copy', pattern: '*.tsv'
-    publishDir "${params.reportdir}", mode: 'copy', pattern: '*.html'
+    publishDir "${params.reportdir}/${tranche_name}/qc_alignment/somalier", mode: 'copy', pattern: '*.tsv'
+    publishDir "${params.reportdir}/${tranche_name}", mode: 'copy', pattern: '*.html', saveAs: { filename -> "${tranche_name}.somalier-relate.html"}
     
     input:
-    file(somalier)
+    tuple val(tranche_name), file(somalier)
     file(ped_file)
 
     output:
-    file 'somalier-relate.*'
+    tuple val(tranche_name), file("${tranche_name}.*")
 
     script:
     """
-    somalier relate -p $ped_file -o \$TMPDIR/somalier-relate *.somalier
-    cp \$TMPDIR/somalier-relate* ./
+    somalier relate -p $ped_file -o \$TMPDIR/${tranche_name} *.somalier
+    cp \$TMPDIR/${tranche_name}* ./
     """
 }
 
@@ -88,21 +88,21 @@ outdir: publish dir
 */
 process SOMALIER_ANCESTRY {
     label 'singlethread'
-    publishDir "${params.outdir}", mode: 'copy', pattern: '*.tsv'
-    publishDir "${params.reportdir}", mode: 'copy', pattern: '*.html'
+    publishDir "${params.reportdir}/${tranche_name}/qc_alignment/somalier", mode: 'copy', pattern: '*.tsv'
+    publishDir "${params.reportdir}/${tranche_name}", mode: 'copy', pattern: '*.html'
     
     input:
-    file(somalier)
+    tuple val(tranche_name), file(somalier)
     file(ancestry_labels)
     path(data_folder)
 
     output:
-    path 'somalier.somalier-ancestry.html', emit: html_file
-    path 'somalier.somalier-ancestry.tsv', emit: ancestry_tsv
+    tuple val(tranche_name), file("${tranche_name}.somalier-ancestry.html"), emit: html_file
+    tuple val(tranche_name), file("${tranche_name}.somalier-ancestry.tsv"), emit: ancestry_tsv
 
     script:
     """
-    somalier ancestry -o \$TMPDIR/ --labels $ancestry_labels ${data_folder}/*.somalier ++ *.somalier
-    cp \$TMPDIR/somalier.somalier-ancestry* ./
+    somalier ancestry -o \$TMPDIR/${tranche_name} --labels $ancestry_labels ${data_folder}/*.somalier ++ *.somalier
+    cp \$TMPDIR/${tranche_name}.somalier-ancestry* ./
     """
 }

@@ -1,3 +1,5 @@
+#!/usr/bin/env Rscript
+
 library(rsconnect)
 library(optparse)
 library(rlang)
@@ -24,7 +26,7 @@ evaluate_filters <- function(df, filters_file) {
     df$QC_pass_status <- "PASS"
     df$fail_reason <- "PASS"
     for (filter_string in scan(filters_file, what="", sep="\n")) {
-      df$summary_qc <- df$summary_qc %>% 
+      df <- df %>% 
         mutate(
           QC_pass_status = ifelse(
             eval_tidy(parse_expr(filter_string)), 
@@ -33,12 +35,20 @@ evaluate_filters <- function(df, filters_file) {
           ),
           fail_reason = ifelse(
             eval_tidy(parse_expr(filter_string)), 
-            filter_string, 
+            paste(fail_reason,filter_string,sep=";"), 
             fail_reason
           )
-        )   
+        ) 
     }
-  } 
+    df <- df %>% mutate(
+        fail_reason=ifelse(
+          fail_reason=="PASS",
+          "PASS",
+          gsub("PASS;","",fail_reason)
+        )
+      )  
+  }
+  return(df)
 }
 
 merge_tables <- function(tables, by="sample") {
@@ -242,23 +252,25 @@ read_contamination_data <- function(path) {
     dt$charr_sd_from_mean <- round(abs(dt$CHARR - charr_stats$mean) / charr_stats$sd, 3)
     dt$hetrate_sd_from_mean <- round(abs(dt$CHARR - het_rate_stats$mean) / het_rate_stats$sd, 3)
   }
-  return(res)
+  return(dt)
 }
 
-read_vars_QC <- function(project_id, data_path, minDP, minQUAL, by_tranche=T, previous_rds=NULL, force_update=F) {
+read_vars_QC <- function(project_id, data_path, minDP, minQUAL, by_tranche=T, previous_rds=NA, force_update=F) {
   stats <- list()
   vars_per_contig <- list()
   summary_qc <- NULL
   contamination <- list()
+  old_rds <- NULL
   
   # If we need to update a previous RDS read it and clean previous applied filter columns
-  if (previous_rds) {
+  if (!is.na(previous_rds)) {
     old_rds <- readRDS(previous_rds)
   }
 
   tranches <- list()
   if (by_tranche) {
     tranche_name <- list.dirs(data_path, recursive = F,full.names = F)
+    tranche_name <- tranche_name[ grepl("tranche", tranche_name) ]
     for (t in tranche_name) {
       tranche_path <- paste0(data_path,"/",t,"/qc_variants")
       tranches[[t]] <- tranche_path
@@ -268,7 +280,7 @@ read_vars_QC <- function(project_id, data_path, minDP, minQUAL, by_tranche=T, pr
   }
 
   # Load data from a previous RDS is present
-  if (old_rds) {
+  if (!is.null(old_rds)) {
     for (t in names(tranches)) {
       # if we want to force update then we need to remove new tranches that are aldready present
       if (force_update) {
@@ -302,7 +314,7 @@ read_vars_QC <- function(project_id, data_path, minDP, minQUAL, by_tranche=T, pr
 
     list_of_dt <- list(
       stats[[t]]$summary,
-      contamination[[t]][,.c(SAMPLE, CHARR, HETEROZYGOSITY_RATE,charr_sd_from_mean,hetrate_sd_from_mean)]
+      contamination[[t]][,.(sample, CHARR, HETEROZYGOSITY_RATE,charr_sd_from_mean,hetrate_sd_from_mean)]
     )
     merged_dt <- merge_tables(list_of_dt)
     merged_dt$group <- t
@@ -333,11 +345,13 @@ flagstat_elements <- c(
 )
 
 read_mosdepth <- function(path, canonical_chrs, group_name, minCov) {
+  message("### Processing coverage data ###")
+  message("### Path: ", path)
   mincov_dt <- NULL
-  
   cumcov_dt <- NULL
   files <- list.files(path, pattern="global.dist.txt")
   for (f in files) {
+    message("Processing ", f)
     sample_name <- gsub("\\.mosdepth\\.global\\.dist\\.txt","",f)
     dt <- fread(cmd = paste0("grep total ", path, "/", f), header=F, 
                 col.names=c("min_cov","value"), drop=c(1))
@@ -353,6 +367,7 @@ read_mosdepth <- function(path, canonical_chrs, group_name, minCov) {
   summary_path <- paste0(path, "/summary")
   files <- list.files(summary_path, pattern="*.summary.txt")
   for (f in files) {
+    message("Processing ", f)
     sample_name <- gsub("\\.mosdepth\\.summary\\.txt","",f)
     dt <- fread(paste0(summary_path, "/", f), header=T, 
                 select=c("chrom","mean","min","max"))
@@ -410,7 +425,7 @@ read_samtools_flagstats <- function(path, group_name) {
 
 read_readstats <- function(path, group_name) {
   res_dt <- NULL
-  files <- list.files(path, pattern="\\.rundetails\\.tsv")
+  files <- list.files(path, pattern="\\.per_sample_run\\.tsv")
   for (f in files) {
     dt <- fread(paste0(path, "/", f), header=T)
     setnames(dt,"SAMPLE","sample")
@@ -422,7 +437,7 @@ read_readstats <- function(path, group_name) {
 
 read_samples_per_run <- function(path, group_name) {
   dt <- NULL
-  files <- list.files(path, pattern="\\.per_sample_run\\.tsv")
+  files <- list.files(path, pattern="\\.rundetails\\.tsv")
   for (f in files) {
     tmp_dt <- fread(paste0(path, "/", f), header=T)
     dt <- rbind(dt, tmp_dt)
@@ -441,7 +456,7 @@ read_samples_per_run <- function(path, group_name) {
 
 read_runs_per_sample <- function(path, group_name) {
   dt <- NULL
-  files <- list.files(path, pattern="\\.per_sample_run\\.tsv")
+  files <- list.files(path, pattern="\\.rundetails\\.tsv")
   for (f in files) {
     tmp_dt <- fread(paste0(path, "/", f), header=T)
     dt <- rbind(dt, tmp_dt)
@@ -461,14 +476,14 @@ read_runs_per_sample <- function(path, group_name) {
 }
 
 read_somalier <- function(path, group_name) {
-  pairs_dt <- fread(paste0(path, "/somalier-relate.pairs.tsv"), header=T)
+  pairs_dt <- fread(paste0(path, "/",group_name, ".pairs.tsv"), header=T)
   setnames(pairs_dt, "#sample_a", "sample_a")
   pairs_dt$group <- group_name
-  samples_dt <- fread(paste0(path, "/somalier-relate.samples.tsv"), header=T, 
+  samples_dt <- fread(paste0(path, "/",group_name, ".samples.tsv"), header=T, 
                       select=c("sample_id","original_pedigree_sex","X_depth_mean","Y_depth_mean","n_hom_ref","n_het","n_hom_alt"))
   samples_dt$group <- group_name
   setnames(samples_dt, "sample_id", "sample")
-  ancestry_dt <- fread(paste0(path, "/somalier.somalier-ancestry.tsv"), header=T)
+  ancestry_dt <- fread(paste0(group_name, ".somalier-ancestry.tsv"), header=T)
   ancestry_dt$group <- group_name
   ancestry_dt$given_ancestry[ancestry_dt$given_ancestry == ""] <- "External_sample"
   setnames(ancestry_dt, "#sample_id", "sample")
@@ -484,7 +499,7 @@ read_somalier <- function(path, group_name) {
   return(list(pairs=pairs_dt,related_samples=related_pairs,samples=samples_dt,ancestry=ancestry_dt))
 }
 
-read_alignment_QC <- function(project_id, data_path, canonical_chrs, minCov = 10,by_tranche=T,previous_rds=NULL,force_update=F) {
+read_alignment_QC <- function(project_id, data_path, somalier_path, canonical_chrs, minCov = 10,by_tranche=T,previous_rds=NA,force_update=F) {
   coverage <- list()
   samtools_stats <- list()
   readstats <- list()
@@ -494,7 +509,7 @@ read_alignment_QC <- function(project_id, data_path, canonical_chrs, minCov = 10
   old_rds <- NULL
   
   # If we need to update a previous RDS read it and clean previous applied filter columns
-  if (previous_rds) {
+  if (!is.na(previous_rds)) {
     old_rds <- readRDS(previous_rds)
   }
 
@@ -502,6 +517,7 @@ read_alignment_QC <- function(project_id, data_path, canonical_chrs, minCov = 10
   tranches <- list()
   if (by_tranche) {
     tranche_name <- list.dirs(data_path, recursive = F,full.names = F)
+    tranche_name <- tranche_name[ grepl("tranche", tranche_name) ]
     for (t in tranche_name) {
       tranche_path <- paste0(data_path,"/",t,"/qc_alignment")
       tranches[[t]] <- tranche_path
@@ -511,7 +527,7 @@ read_alignment_QC <- function(project_id, data_path, canonical_chrs, minCov = 10
   }
 
   # Load data from a previous RDS is present
-  if (old_rds) {
+  if (!is.null(old_rds)) {
     for (t in names(tranches)) {
       # if we want to force update then we need to remove new tranches that are aldready present
       if (force_update) {
@@ -552,7 +568,7 @@ read_alignment_QC <- function(project_id, data_path, canonical_chrs, minCov = 10
       s_per_run = read_samples_per_run(paste0(tranche_path,"/readstats"), t),
       r_per_sample = read_runs_per_sample(paste0(tranche_path,"/readstats"), t)
     )
-    somalier[[t]] <- read_somalier(paste0(tranche_path,"/somalier"), t)
+    somalier[[t]] <- read_somalier(somalier_path, t)
 
     # Compile summary aling QC table from single metrics tables
     r_per_sample_wide <- as.data.table(readstats[[t]]$r_per_sample[, !"group"] %>% 
@@ -592,13 +608,15 @@ read_alignment_QC <- function(project_id, data_path, canonical_chrs, minCov = 10
 option_list = list(
   make_option(c("-p", "--project_qc_dir"), action="store", default=NA, type='character',
               help="directory of the project QC data. Expects subfolders for tranches in it"),
+  make_option(c("-s", "--somalier_tsv_dir"), action="store", default="./", type='character',
+              help="directory where the TSV files from somalier ancestry/relate are stored"),
   make_option(c("-n", "--project_name"), action="store", default=NA, type='character',
               help="Project name. Used as subfolder to store data in the app"),
   make_option(c("-a", "--app_dir"), action="store", default=NA, type='character',
               help="Full path to the app directory"),
   make_option(c("-d", "--app_name"),  action="store", default=NA, type='character',
               help="name of the app to use for publishing to rsconnect"),
-  make_option(c("-u", "--update_app"), action="store_true",
+  make_option(c("-u", "--update_app"), action="store_true", default=FALSE,
               help="set this to update the shiny app"),
   make_option(c("-t", "--by_tranche"), action="store_true",
               help="set this when qc results are organized by tranche. Multiple sub-folders are then expected in project_qc_dir"),
@@ -606,19 +624,27 @@ option_list = list(
               help="Text file containing filter to apply to align one per line. Samples selected by any of these are marked as FAIL"),
   make_option(c("-v", "--var_filters"), action="store", default=NA, type='character',
               help="Text file containing filter to apply to vars one per line. Samples selected by any of these are marked as FAIL"),
-  make_option(c("-x", "--force_update"), action="store_true", default=NA, type='character',
-              help="Set this to force update data even if already present in the RDS")
+  make_option(c("-x", "--force_update"), action="store_true", default=FALSE,
+              help="Set this to force update data even if already present in the RDS"),
+  make_option(c("-w", "--var_qc_rds"), action="store", default=NA, type='character',
+              help="RDS file of previous variants qc data"),
+  make_option(c("-z", "--align_qc_rds"), action="store", default=NA, type='character',
+              help="RDS file of previous alignments qc data")                        
 )
 opt = parse_args(OptionParser(option_list=option_list))
 
 # Check arguments -------------
 project_dir = opt$project_qc_dir
 project_name = opt$project_name
+somalier_dir = opt$somalier_tsv_dir
 app_dir = opt$app_dir
 app_name = opt$app_name
 align_filters = opt$align_filters
 var_filters = opt$var_filters
 by_tranche = opt$by_tranche
+previous_var_rds = opt$var_qc_rds
+previous_align_rds = opt$align_qc_rds
+force_update = opt$force_update
 
 if (opt$update_app) {
   if (is.na(app_dir) | is.na(app_name)) {
@@ -634,7 +660,7 @@ if (!dir.exists(project_dir)) {
 
 # Read alignements QC and apply filters -------------
 message("Reading align QC data...")
-qc_align_data <- read_alignment_QC(p,project_dir, canonical_chrs, min_cov, by_tranche)
+qc_align_data <- read_alignment_QC(p,project_dir, somalier_dir, canonical_chrs, min_cov, by_tranche, previous_var_rds, force_update)
 qc_align_data$summary_qc$QC_pass_status <- "NOT_APPLIED"
 
 qc_align_data$summary_qc <- evaluate_filters(qc_align_data$summary_qc, align_filters)
@@ -644,13 +670,30 @@ save_tsv(qc_align_data$summary_qc, paste0(project_dir,"/qc_align_summary.tsv"))
 
 # Read variants QC and apply filters -------------
 message("Reading variants QC data...")
-qc_vars_data <- read_vars_QC(p,project_dir, min_cov, min_qual, by_tranche)
+qc_vars_data <- read_vars_QC(p,project_dir, min_cov, min_qual, by_tranche, previous_var_rds, force_update)
 qc_vars_data$summary_qc$QC_pass_status <- "NOT_APPLIED"
 
 qc_vars_data$summary_qc <- evaluate_filters(qc_vars_data$summary_qc, var_filters)
 
 saveRDS(qc_vars_data, file = paste0(project_dir,"/qc_vars.RDS"))
 save_tsv(qc_vars_data$summary_qc, paste0(project_dir,"/qc_vars_summary.tsv"))
+
+qc_align_merge <- qc_align_data$summary_qc %>% select(sample,group,QC_pass_status)
+qc_vars_merge <- qc_vars_data$summary_qc %>% select(sample,QC_pass_status)
+setnames(qc_align_merge, "QC_pass_status", "align_pass_status")
+setnames(qc_vars_merge, "QC_pass_status", "vars_pass_status")
+qc_merged <- merge(qc_align_merge, qc_vars_merge, by="sample", all.x=T)
+qc_merged %>% mutate(pass_status=ifelse(align_pass_status == "FAIL" | vars_pass_status == "FAIL", "FAIL", "PASS"))
+
+qc_merged_counts <- qc_merged %>% group_by(group) %>%
+  summarise(n_samples=n(), n_pass=sum(pass_status == "PASS"), n_fail=sum(pass_status == "FAIL")) %>%
+  mutate(fraction_fail=n_fail/n_samples)
+qc_merged_counts <- c("total", 
+  sum(qc_merged_counts$n_samples),
+  sum(qc_merged_counts$n_pass),
+  sum(qc_merged_counts$n_fail),
+  sum(qc_merged_counts$n_fail)/sum(qc_merged_counts$n_samples))
+save_tsv(qc_merged_counts, paste0(project_dir,"/project_qc_summary.tsv"))
 
 # Update shiny app data if requested ------------
 if (opt$update_app) {
@@ -659,6 +702,8 @@ if (opt$update_app) {
   dir.create(app_project_dir,recursive = T)
   file.copy(paste0(project_dir,"/qc_align.RDS"),paste0(app_project_dir, "/qc_align.RDS"),overwrite = T)
   file.copy(paste0(project_dir,"/qc_vars.RDS"),paste0(app_project_dir, "/qc_vars.RDS"),overwrite = T)
+  file.copy(paste0(project_dir,"/project_qc_summary.tsv"),paste0(app_project_dir, "/project_qc_summary.tsv"),overwrite = T)
+
   server = Sys.getenv("RSCONNECT_SERVER")
   key = Sys.getenv("RSCONNECT_APIKEY")
   connectApiUser(account = "deploy_account", apiKey = key, quiet = FALSE, server=server)

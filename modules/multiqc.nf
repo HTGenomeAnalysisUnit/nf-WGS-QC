@@ -1,9 +1,9 @@
 process MULTIQC {
     label 'singlethread'
-    publishDir "$params.outdir", mode: 'copy'
+    publishDir "${params.reportdir}/${tranche_name}", mode: 'copy'
 
     input:
-    file(qc_files)
+    tuple val(tranche_name), file(coverage_files), file(samtools_stats), file(somalier_relate), file(somalier_ancestry)
     file(multiqc_config)
 
     output:

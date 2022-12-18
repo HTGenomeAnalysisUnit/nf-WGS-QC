@@ -9,6 +9,8 @@ outdir_vars = "${outdir}/qc_variants"
 include { RUN_ALIGNEMENTS_QC } from "${projectDir}/workflows/qc_alignments" addParams( outdir: "${outdir_align}")
 include { RUN_VARIANTS_QC } from "${projectDir}/workflows/qc_variants" addParams( outdir: "${outdir_vars}")
 include { GET_SAMPLE_ID_BAM; GET_SAMPLE_ID_VCF } from "${projectDir}/modules/get_sample_id"
+include { GET_BAM_MANIFEST; GET_VCF_MANIFEST } from "${projectDir}/modules/get_sample_id"
+include { MAKE_REPORTS_WF } from "${projectDir}/workflows/make_reports"
 
 workflow {
         log.info """\
@@ -33,25 +35,27 @@ workflow {
             .watchPath(params.bamfiles)
             .map { tuple(it, file("${it}.bai")) }
         GET_SAMPLE_ID_BAM(bam_files)
+        GET_BAM_MANIFEST(bam_files)
     }
     if (params.vcffiles) {
         vcf_files = Channel
             .watchPath(params.vcffiles)
             .map{ tuple(it, file("${it}.${params.vcf_index_type}")) }
         GET_SAMPLE_ID_VCF(vcf_files)
+        GET_VCF_MANIFEST(vcf_files)
     }
 
     // Get sample IDs from BAM if available otherwise from VCF files
     if (params.bamfiles) {
-        manifest_bam = file("${outdir}/ext2int_map_bam.tsv")
-        ext2int_map_ch = GET_SAMPLE_ID_BAM.out.id_map
+        manifest_bam = file("${outdir}/bam_manifest.tsv")
+        ext2int_map_ch = GET_BAM_MANIFEST.out
             .map { "${it.join('\t')}" }
             .subscribe { manifest_bam.append("$it\n") }
             //.collectFile(name: "${outdir}/ext2int_map_bam.tsv", newLine: true)
     }
     if (params.vcffiles) {
-        manifest_vcf = file("${outdir}/ext2int_map_vcf.tsv")
-        ext2int_map_ch = GET_SAMPLE_ID_VCF.out.id_map
+        manifest_vcf = file("${outdir}/vcf_manifest.tsv")
+        ext2int_map_ch = GET_VCF_MANIFEST.out
             .map { "${it.join('\t')}" }
             .subscribe { manifest_vcf.append("$it\n") }
             //.collectFile(name: "${outdir}/ext2int_map_vcf.tsv", newLine: true)
@@ -77,7 +81,7 @@ workflow {
 }
 
 workflow MAKE_REPORTS {
-    
+    MAKE_REPORTS_WF()
 }
 
 workflow.onComplete { 

@@ -1,44 +1,70 @@
+#!/usr/bin/env python
+
 import os, sys, shutil
 from datetime import datetime, timedelta
+import pandas as pd
+from glob import glob
+import re
+import argparse
 
-# Read the first command-line argument as the source folder
-source_dir = sys.argv[1]
+re_exp_align = re.compile('.+/qc_alignment/')
+re_exp_vars = re.compile('.+/qc_variants/')
 
-# Read the second command-line argument as the name of the dest folder
-dest_dir = sys.argv[2]
+def symlink_files(row, source_dir, dest_dir):
+    source_abs_path = os.path.abspath(source_dir)
+    files_in_tranche = glob(f"{source_abs_path}/**/{row['external_id']}*", recursive=True)
+    for source_file in files_in_tranche:
+        dirname = os.path.dirname(source_file)
+        subdir = re.sub(re_exp_align,'qc_alignment/',dirname)
+        subdir = re.sub(re_exp_vars,'qc_variants/',subdir)
+        target_dir = os.path.join(dest_dir,subdir)
+        basename = os.path.basename(source_file)
+        target_file = os.path.join(target_dir, basename)
+        #print(f"file: {source_file}, subdir: {subdir}, target_dir: {target_dir}")
+        os.makedirs(target_dir,exist_ok=True)
 
-# Set start date YYYY/MM/DD
-start_date = sys.argv[3]
+        os.symlink(source_file, target_file)
 
-# Set interval in days
-days_interval = int(sys.argv[4])
+# Command line parser
+parser = argparse.ArgumentParser()
 
-files = set()
-for r,s,f in os.walk(source_dir):
-    for file in f:
-        files.add(os.path.join(r,file))
+# Add the arguments
+parser.add_argument('--source_dir', default='./', help='The source directory')
+parser.add_argument('--dest_dir', default='by_tranche', help='The destination directory')
+parser.add_argument('--start_date', required=True, help='The start date')
+parser.add_argument('--days_interval', default=7, type=int, help='The number of days in each interval')
+parser.add_argument('--manifest_file', required=True, help='The manifest file')
 
-print(f"{len(files)} files found in {source_dir}")
+# Parse the arguments
+args = parser.parse_args()
 
-range_start = datetime.strptime(start_date, "%Y/%m/%d")
-range_end = range_start + timedelta(days=days_interval)
+# Access the arguments
+source_dir = args.source_dir
+dest_dir = args.dest_dir
+start_date = args.start_date
+days_interval = args.days_interval
+manifest_file = args.manifest_file
 
-while True:
-    tranche_dir = "tranche_{}_{}".format(range_start.strftime("%Y%m%d"), range_end.strftime("%Y%m%d"))
+
+df = pd.read_csv(manifest_file, sep="\t", names=['internal_id', 'external_id', 'date', 'file_path'], parse_dates=["date"])
+print(f"{len(df)} files found in {manifest_file}")
+
+range_start = datetime.strptime(start_date, "%Y%m%d")
+current_date = datetime.now()
+
+# Create a list of date intervals
+date_intervals = []
+while range_start < current_date:
+    range_end = range_start + timedelta(days=7)
+    date_intervals.append((range_start, range_end))
+    range_start = range_end
+
+for start, end in date_intervals:
+    tranche_dir = "tranche_{}_{}".format(start.strftime("%Y%m%d"), end.strftime("%Y%m%d"))
+    tranche_dir = os.path.join(dest_dir,tranche_dir)
     print(f"tranche dir: {tranche_dir}")
     
-    files_in_interval = {f for f in files if os.path.getctime(f) > datetime.timestamp(range_start) and os.path.getctime(f) < datetime.timestamp(range_end)}
-    print(f"{len(files_in_interval)} files in this interval")
+    samples_in_interval = df[(df["date"] >= start.strftime("%Y%m%d")) & (df["date"] < end.strftime("%Y%m%d"))]
+    print(f"{len(samples_in_interval)} samples in this interval")
 
-    for x in files_in_interval:
-        subdir = os.path.dirname(x).replace(f"{source_dir}/", '')
-        target_dir = os.path.join(dest_dir,tranche_dir,subdir)
-        #print(f"file: {x}, subdir: {subdir}, target_dir: {target_dir}")
-        os.makedirs(target_dir,exist_ok=True)
-        shutil.move(x, target_dir)
-    files = files - files_in_interval
-
-    if range_end > datetime.now(): break
-
-    range_start = range_end
-    range_end = range_start + timedelta(days=days_interval)
+    samples_in_interval.apply(lambda row: symlink_files(row, source_dir, tranche_dir), axis=1)

@@ -1,6 +1,6 @@
 process MAKE_PED {
     label 'small_on_local'
-    publishDir "${params.outdir}", mode: 'copy'
+    publishDir "${params.summary_output}", mode: 'copy'
     
     input:
     path(project_metadata)
