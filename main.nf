@@ -6,6 +6,7 @@ file(outdir).mkdirs()
 outdir_align = "${outdir}/qc_alignment"
 outdir_vars = "${outdir}/qc_variants"
 outdir_bamindex = "${outdir}/bam_index"
+outdir_vcfindex = "${outdir}/vcf_index"
 
 include { RUN_ALIGNEMENTS_QC } from "${projectDir}/workflows/qc_alignments" addParams( outdir: "${outdir_align}")
 include { RUN_VARIANTS_QC } from "${projectDir}/workflows/qc_variants" addParams( outdir: "${outdir_vars}")
@@ -13,6 +14,7 @@ include { GET_SAMPLE_ID_BAM; GET_SAMPLE_ID_VCF } from "${projectDir}/modules/get
 include { GET_BAM_MANIFEST; GET_VCF_MANIFEST } from "${projectDir}/modules/get_sample_id"
 include { MAKE_REPORTS_WF } from "${projectDir}/workflows/make_reports"
 include { SAMTOOLS_INDEX } from "${projectDir}/modules/samtools" addParams( outdir: "${outdir_bamindex}")
+include { BCFTOOLS_INDEX } from "${projectDir}/modules/bcftools" addParams( outdir: "${outdir_vcfindex}")
 
 workflow {
         log.info """\
@@ -32,23 +34,40 @@ workflow {
 
     // Set input files channels
     //bamfiles/vcffiles is a glob of multiple files
+    bam_input_ch = Channel.emtpy()
+    vcf_input_ch = Channel.empty()
+    if (params.bamlist) {
+        bam_input_paths = file(params.bamlist)
+            .readLines()
+        bam_input_ch = Channel.fromList(bam_input_paths)
+            .map { it -> file("$it") }  
+    }
+    if (params.vcflist) {
+        vcf_input_paths = file(params.vcflist)
+            .readLines()
+        vcf_input_ch = Channel.fromList(vcf_input_paths)
+            .map { it -> file("$it") }  
+    }
     if (params.bamfiles) {
         bam_input_ch = Channel
-            .watchPath(params.bamfiles)
-        bam_files = SAMTOOLS_INDEX(bam_input_ch)
-        GET_SAMPLE_ID_BAM(bam_files)
-        GET_BAM_MANIFEST(bam_files)
+            .watchPath(params.bamfiles, 'create,modify')
     }
     if (params.vcffiles) {
-        vcf_files = Channel
-            .watchPath(params.vcffiles)
-            .map{ tuple(it, file("${it}.${params.vcf_index_type}")) }
-        GET_SAMPLE_ID_VCF(vcf_files)
-        GET_VCF_MANIFEST(vcf_files)
+        vcf_input_ch = Channel
+            .watchPath(params.vcffiles, 'create,modify')
     }
 
+    //Pre-process: create indexes, get sample ids, make manifest
+    bam_files = SAMTOOLS_INDEX(bam_input_ch)
+    GET_SAMPLE_ID_BAM(bam_files)
+    GET_BAM_MANIFEST(bam_files)
+
+    vcf_files = BCFTOOLS_INDEX(vcf_input_ch)
+    GET_SAMPLE_ID_VCF(vcf_files)
+    GET_VCF_MANIFEST(vcf_files)
+
     // Get sample IDs from BAM if available otherwise from VCF files
-    if (params.bamfiles) {
+    if (params.bamfiles || params.bamlist) {
         manifest_bam = file("${outdir}/bam_manifest.tsv")
         ext2int_map_ch = GET_BAM_MANIFEST.out
             .map { "${it.join('\t')}" }
@@ -64,7 +83,7 @@ workflow {
     }
 
     //Perform the QC on BAMs and/or VCFs
-    if (params.bamfiles) {
+    if (params.bamfiles || params.bamlist) {
         checkPathParamList = [
                 params.somalier_vars, params.genome, "${params.genome}.fai"
                 ]

@@ -169,6 +169,22 @@ process BCFTOOLS_STATS {
     """
 }
 
+process BCFTOOLS_INDEX {
+    label 'lowcores'
+    publishDir "${params.outdir}", mode: 'copy'
+
+    input:
+        file(vcf_file)
+
+    output:
+        tuple file(vcf_file), file("${vcf_file}.csi")
+
+    script:
+    """
+    bcftools index $vcf_file
+    """
+}
+
 process BCFTOOLS_IDX_STATS {
     label 'singlethread'
     publishDir "${params.outdir}", mode: 'copy'
