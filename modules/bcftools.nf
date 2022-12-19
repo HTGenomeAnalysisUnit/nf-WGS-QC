@@ -162,7 +162,9 @@ process BCFTOOLS_STATS {
         tuple val(sample), file("${sample}.vars.stats")
 
     script:
+    def make_index = vcf_index.exists() ? '' : "bcftools index $vcf_file"
     """
+    $make_index
     bcftools stats -f "PASS,." -s- --threads ${task.cpus} $vcf_file > ${sample}.vars.stats
     """
 }
@@ -178,7 +180,9 @@ process BCFTOOLS_IDX_STATS {
         tuple val(sample), file("${sample}.varsPerContig.tsv")
 
     script:
+    def make_index = vcf_index.exists() ? '' : "bcftools index $vcf_file"
     """
+    $make_index
     bcftools index --stats $vcf_file > ${sample}.varsPerContig.tsv
     """
 }

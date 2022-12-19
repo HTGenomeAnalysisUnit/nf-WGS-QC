@@ -117,3 +117,19 @@ process SAMTOOLS_SAM2BAM {
     samtools view -@ ${task.cpus} -b $sam_file > ${prefix}.bam
     """
 }
+
+process SAMTOOLS_INDEX {
+    label 'lowcores'
+    publishDir "${params.outdir}", mode: 'copy', pattern: '*.bai'
+
+    input:
+    file(bam_file)
+
+    output:
+    tuple file(bam_file), file("${bam_file}.bai")
+
+    script:
+    """
+    samtools index -@ ${task.cpus} $bam_file
+    """
+}

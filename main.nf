@@ -5,19 +5,21 @@ outdir = params.project_id ? "${main_outdir}/${params.project_id}" : "${main_out
 file(outdir).mkdirs()
 outdir_align = "${outdir}/qc_alignment"
 outdir_vars = "${outdir}/qc_variants"
+outdir_bamindex = "${outdir}/bam_index"
 
 include { RUN_ALIGNEMENTS_QC } from "${projectDir}/workflows/qc_alignments" addParams( outdir: "${outdir_align}")
 include { RUN_VARIANTS_QC } from "${projectDir}/workflows/qc_variants" addParams( outdir: "${outdir_vars}")
 include { GET_SAMPLE_ID_BAM; GET_SAMPLE_ID_VCF } from "${projectDir}/modules/get_sample_id"
 include { GET_BAM_MANIFEST; GET_VCF_MANIFEST } from "${projectDir}/modules/get_sample_id"
 include { MAKE_REPORTS_WF } from "${projectDir}/workflows/make_reports"
+include { SAMTOOLS_INDEX } from "${projectDir}/modules/samtools" addParams( outdir: "${outdir_bamindex}")
 
 workflow {
         log.info """\
     =============================================
          WGS QC    -    N F   P I P E L I N E    
     =============================================
-    bam files   : ${params.bamfiles ? params.vcffiles : "NO BAM files"}
+    bam files   : ${params.bamfiles ? params.bamfiles : "NO BAM files"}
     VCF files   : ${params.vcffiles ? params.vcffiles : "NO VCF files"}
     VCF index   : ${params.vcf_index_type}
     mode        : ${params.mode}
@@ -31,9 +33,9 @@ workflow {
     // Set input files channels
     //bamfiles/vcffiles is a glob of multiple files
     if (params.bamfiles) {
-        bam_files = Channel
+        bam_input_ch = Channel
             .watchPath(params.bamfiles)
-            .map { tuple(it, file("${it}.bai")) }
+        bam_files = SAMTOOLS_INDEX(bam_input_ch)
         GET_SAMPLE_ID_BAM(bam_files)
         GET_BAM_MANIFEST(bam_files)
     }
@@ -94,3 +96,4 @@ workflow.onComplete {
     Variants     --> ${outdir_vars}   
     """.stripIndent() : "Oops .. something went wrong" )
 }
+
