@@ -12,7 +12,7 @@ process COMPUTE_READSTATS {
 
     script:
     """
-    readname_stats --out $sample $bam_file
+    readname_stats -s 5000000 --out $sample $bam_file
     """
 }
 

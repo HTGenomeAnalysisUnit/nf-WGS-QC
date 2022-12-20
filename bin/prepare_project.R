@@ -13,6 +13,7 @@ library(stringr)
 min_cov <- 10
 min_qual <- 20
 canonical_chrs <- paste("chr",c(1:22,"X","Y","M","MT"), sep="")
+timestamp <- format(Sys.time(), "%Y/%m/%d %H:%M:%S")
 
 # Helper functions -----------------
 `%nin%` <- Negate('%in%')
@@ -330,8 +331,8 @@ read_vars_QC <- function(project_id, data_path, minDP, minQUAL, by_tranche=T, pr
     #Compute charr mean / sd / deviation across the tranche
     charr_stats <- list(mean=mean(merged_dt$CHARR), sd=sd(merged_dt$CHARR))
     het_rate_stats <- list(mean=mean(merged_dt$HETEROZYGOSITY_RATE), sd=sd(merged_dt$HETEROZYGOSITY_RATE))
-    merged_dt$charr_sd_from_mean <- round(abs(merged_dt$CHARR - charr_stats$mean) / charr_stats$sd, 3)
-    merged_dt$hetrate_sd_from_mean <- round(abs(merged_dt$HETEROZYGOSITY_RATE - het_rate_stats$mean) / het_rate_stats$sd, 3)
+    merged_dt$charr_sd_from_mean <- round((merged_dt$CHARR - charr_stats$mean) / charr_stats$sd, 3)
+    merged_dt$hetrate_sd_from_mean <- round((merged_dt$HETEROZYGOSITY_RATE - het_rate_stats$mean) / het_rate_stats$sd, 3)
     
     #Add the group tag and rbind
     merged_dt$group <- t
@@ -616,7 +617,7 @@ read_alignment_QC <- function(project_id, data_path, somalier_path, canonical_ch
                        somalier[[t]]$related_samples)
     merged_dt <- merge_tables(list_of_dt)
     merged_dt$inferred_sex <- ifelse(
-      (merged_dt$Y_depth_mean / merged_dt$X_depth_mean) > 0.8 & (merged_dt$Y_depth_mean / merged_dt$X_depth_mean) < 1.2,
+      (merged_dt$Y_depth_mean / merged_dt$X_depth_mean) > 0.5 & (merged_dt$Y_depth_mean / merged_dt$X_depth_mean) < 1.5,
       "male", "female")
     merged_dt$concordant_sex <- ifelse(merged_dt$inferred_sex == merged_dt$original_pedigree_sex, 1,0)
     merged_dt$group <- t
@@ -702,6 +703,9 @@ qc_align_data$summary_qc$QC_pass_status <- "NOT_APPLIED"
 message("### APPLY VARS FILTERS IF ANY ###")
 qc_align_data$summary_qc <- evaluate_filters(qc_align_data$summary_qc, align_filters)
 
+message("### STORE CURRENT TIMESTAMP ###")
+qc_align_data$last_update <- timestamp
+
 message("### SAVE ALIGN QC REPORTS ###")
 saveRDS(qc_align_data, file = paste0(project_dir,"/qc_align.RDS"))
 save_tsv(qc_align_data$summary_qc, paste0(project_dir,"/qc_align_summary.tsv"))
@@ -715,6 +719,9 @@ qc_vars_data$summary_qc$QC_pass_status <- "NOT_APPLIED"
 
 message("### APPLY VARS FILTERS IF ANY ###")
 qc_vars_data$summary_qc <- evaluate_filters(qc_vars_data$summary_qc, var_filters)
+
+message("### STORE CURRENT TIMESTAMP ###")
+qc_vars_data$last_update <- timestamp
 
 message("### SAVE VARS QC REPORTS ###")
 saveRDS(qc_vars_data, file = paste0(project_dir,"/qc_vars.RDS"))

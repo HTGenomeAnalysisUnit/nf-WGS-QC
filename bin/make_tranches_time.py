@@ -30,7 +30,7 @@ parser = argparse.ArgumentParser()
 
 # Add the arguments
 parser.add_argument('--source_dir', default='./', help='The source directory')
-parser.add_argument('--dest_dir', default='by_tranche', help='The destination directory')
+parser.add_argument('--dest_dir', default='by_tranche_data', help='The destination directory')
 parser.add_argument('--start_date', required=True, help='The start date')
 parser.add_argument('--days_interval', default=7, type=int, help='The number of days in each interval')
 parser.add_argument('--manifest_file', required=True, help='The manifest file')

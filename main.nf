@@ -34,7 +34,7 @@ workflow {
 
     // Set input files channels
     //bamfiles/vcffiles is a glob of multiple files
-    bam_input_ch = Channel.emtpy()
+    bam_input_ch = Channel.empty()
     vcf_input_ch = Channel.empty()
     if (params.bamlist) {
         bam_input_paths = file(params.bamlist)
@@ -74,7 +74,7 @@ workflow {
             .subscribe { manifest_bam.append("$it\n") }
             //.collectFile(name: "${outdir}/ext2int_map_bam.tsv", newLine: true)
     }
-    if (params.vcffiles) {
+    if (params.vcffiles || params.vcflist) {
         manifest_vcf = file("${outdir}/vcf_manifest.tsv")
         ext2int_map_ch = GET_VCF_MANIFEST.out
             .map { "${it.join('\t')}" }
@@ -95,7 +95,7 @@ workflow {
         RUN_ALIGNEMENTS_QC(GET_SAMPLE_ID_BAM.out.bam_files, params.regions, somalier_varset, genome_ref) 
     } 
 
-    if (params.vcffiles) {
+    if (params.vcffiles || params.vcflist) {
         annotation_zip_file = file(params.af_annotation_zip, checkIfExists: true)
         RUN_VARIANTS_QC(GET_SAMPLE_ID_VCF.out.vcf_files, annotation_zip_file)
     }
