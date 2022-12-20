@@ -1,4 +1,5 @@
 process PREPARE_SUMMARY {
+    label 'lowcores'
     publishDir "${params.summary_output}", mode: 'copy'
     
     input:
