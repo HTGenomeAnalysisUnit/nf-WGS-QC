@@ -171,7 +171,7 @@ process BCFTOOLS_STATS {
 
 process BCFTOOLS_INDEX {
     label 'lowcores'
-    publishDir "${params.outdir}", mode: 'copy'
+    publishDir "${params.outdir}", mode: 'copy', pattern: '*.csi'
 
     input:
         file(vcf_file)
