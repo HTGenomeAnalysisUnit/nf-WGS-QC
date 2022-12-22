@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import os, sys, shutil
+import os
 from datetime import datetime, timedelta
 import pandas as pd
 from glob import glob
@@ -59,12 +59,29 @@ while range_start < current_date:
     date_intervals.append((range_start, range_end))
     range_start = range_end
 
+# Symlink files in each interval and create counts report
+daily_counts_list = []
 for start, end in date_intervals:
-    tranche_dir = "tranche_{}_{}".format(start.strftime("%Y%m%d"), end.strftime("%Y%m%d"))
-    tranche_dir = os.path.join(dest_dir,tranche_dir)
+    tranche_name = "tranche_{}_{}".format(start.strftime("%Y%m%d"), end.strftime("%Y%m%d"))
+    tranche_dir = os.path.join(dest_dir,tranche_name)
     print(f"tranche dir: {tranche_dir}")
     
-    samples_in_interval = df[(df["date"] >= start.strftime("%Y%m%d")) & (df["date"] < end.strftime("%Y%m%d"))]
+    pd_date_range = pd.date_range(start,end, inclusive='left')
+    samples_in_interval = df[df['date'].isin(pd_date_range)]
     print(f"{len(samples_in_interval)} samples in this interval")
 
     samples_in_interval.apply(lambda row: symlink_files(row, source_dir, tranche_dir), axis=1)
+    
+    # Count the number of rows for each day in the date range
+    counts = df[df['date'].isin(pd_date_range)].groupby('date').size().reset_index(name='count')
+
+    # Merge the counts with the date range to include zero values for days with no rows
+    daily_counts = pd.merge(pd_date_range.to_frame(name='date'), counts, on='date', how='left').fillna(0)
+    daily_counts['count'] = daily_counts['count'].astype('int')
+
+    # Add tranche id and save
+    daily_counts['tranche'] = tranche_name
+    daily_counts_list.append(daily_counts)
+
+daily_counts_report = pd.concat(daily_counts_list)
+daily_counts_report.to_csv("daily_counts_report.tsv", sep="\t", index=False)
