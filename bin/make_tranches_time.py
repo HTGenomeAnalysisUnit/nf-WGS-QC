@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import os
+import os, shutil
 from datetime import datetime, timedelta
 import pandas as pd
 from glob import glob
@@ -22,7 +22,7 @@ def symlink_files(row, source_dir, dest_dir):
         target_file = os.path.join(target_dir, basename)
         #print(f"file: {source_file}, subdir: {subdir}, target_dir: {target_dir}")
         os.makedirs(target_dir,exist_ok=True)
-
+        
         os.symlink(source_file, target_file)
 
 # Command line parser
@@ -34,6 +34,7 @@ parser.add_argument('--dest_dir', default='by_tranche_data', help='The destinati
 parser.add_argument('--start_date', required=True, help='The start date')
 parser.add_argument('--days_interval', default=7, type=int, help='The number of days in each interval')
 parser.add_argument('--manifest_file', required=True, help='The manifest file')
+parser.add_argument('--force_update', action="store_true", help="Overwrite tranches that already exist")
 
 # Parse the arguments
 args = parser.parse_args()
@@ -65,6 +66,12 @@ for start, end in date_intervals:
     tranche_name = "tranche_{}_{}".format(start.strftime("%Y%m%d"), end.strftime("%Y%m%d"))
     tranche_dir = os.path.join(dest_dir,tranche_name)
     print(f"tranche dir: {tranche_dir}")
+    if os.path.exists(tranche_dir) and args.force_update:
+        shutil.rmtree(tranche_dir)
+    else:
+        print(f"{tranche_dir} already present. Skip this one")
+        continue
+    
     
     pd_date_range = pd.date_range(start,end, inclusive='left')
     samples_in_interval = df[df['date'].isin(pd_date_range)]
