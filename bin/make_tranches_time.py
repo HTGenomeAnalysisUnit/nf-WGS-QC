@@ -66,11 +66,12 @@ for start, end in date_intervals:
     tranche_name = "tranche_{}_{}".format(start.strftime("%Y%m%d"), end.strftime("%Y%m%d"))
     tranche_dir = os.path.join(dest_dir,tranche_name)
     print(f"tranche dir: {tranche_dir}")
-    if os.path.exists(tranche_dir) and args.force_update:
-        shutil.rmtree(tranche_dir)
-    else:
-        print(f"{tranche_dir} already present. Skip this one")
-        continue
+    if os.path.exists(tranche_dir):
+        if args.force_update:
+            shutil.rmtree(tranche_dir)
+        else:
+            print(f"{tranche_dir} already present. Skip this one")
+            continue
     
     
     pd_date_range = pd.date_range(start,end, inclusive='left')
@@ -90,5 +91,6 @@ for start, end in date_intervals:
     daily_counts['tranche'] = tranche_name
     daily_counts_list.append(daily_counts)
 
-daily_counts_report = pd.concat(daily_counts_list)
-daily_counts_report.to_csv("daily_counts_report.tsv", sep="\t", index=False)
+if (len(daily_counts_list) > 0):
+    daily_counts_report = pd.concat(daily_counts_list)
+    daily_counts_report.to_csv("daily_counts_report.tsv", sep="\t", index=False)

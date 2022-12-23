@@ -521,8 +521,8 @@ read_somalier <- function(path, group_name) {
   ancestry_dt$given_ancestry[ancestry_dt$given_ancestry == ""] <- "External_sample"
   setnames(ancestry_dt, "#sample_id", "sample")
   
-  message("Find related pairs")
-  related_pairs <- pairs_dt[relatedness >= 0.5]
+  message("Find likely identical pairs")
+  related_pairs <- pairs_dt[relatedness >= 0.8]
   related_pairs_a <- related_pairs %>% group_by(sample_a) %>% summarise(r_a = paste(unique(sample_b), collapse=","))
   related_pairs_b <- related_pairs %>% group_by(sample_b) %>% summarise(r_b = paste(unique(sample_a), collapse=","))
   related_pairs <- merge(related_pairs_a, related_pairs_b, by.x="sample_a", by.y="sample_b", all=T) %>%
