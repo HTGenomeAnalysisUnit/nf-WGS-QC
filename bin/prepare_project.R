@@ -22,32 +22,34 @@ save_tsv <- function(df, outfile) {
   write.table(df, file = outfile, sep="\t", quote=F, row.names = F)
 }
 
-evaluate_filters <- function(df, filters_file) {
+evaluate_filters <- function(df, filters_file, tag) {
   if (!is.na(filters_file)) {
-    df$QC_pass_status <- "PASS"
-    df$fail_reason <- "PASS"
+    df$tmp_col_reason <- "PASS"
+    #df$QC_pass_status <- "PASS"
     for (filter_string in scan(filters_file, what="", sep="\n")) {
       df <- df %>% 
         mutate(
           QC_pass_status = ifelse(
             eval_tidy(parse_expr(filter_string)), 
-            "FAIL", 
+            tag, 
             QC_pass_status
           ),
-          fail_reason = ifelse(
+          tmp_col_reason = ifelse(
             eval_tidy(parse_expr(filter_string)), 
-            paste(fail_reason,filter_string,sep=";"), 
-            fail_reason
+            paste(tmp_col_reason,filter_string,sep=";"), 
+            tmp_col_reason
           )
         ) 
     }
     df <- df %>% mutate(
-        fail_reason=ifelse(
-          fail_reason=="PASS",
+        tmp_col_reason=ifelse(
+          tmp_col_reason=="PASS",
           "PASS",
-          gsub("PASS;","",fail_reason)
+          gsub("PASS;","",tmp_col_reason)
         )
-      )  
+      )
+    reason_col_name <- paste0(tag, "_reason")
+    df <- df %>% rename( !!reason_col_name := tmp_col_reason )
   }
   return(df)
 }
@@ -392,13 +394,22 @@ read_mosdepth <- function(path, canonical_chrs, group_name, minCov) {
     dt <- fread(paste0(summary_path, "/", f), header=T, 
                 select=c("chrom","mean","min","max"))
     setnames(dt, old = c("mean","min","max"), new = c("mean_cov","min_cov","max_cov"))
-    contigs_idx <- c(which(dt$chrom %in% canonical_chrs), which(dt$chrom == "total"))
+    contigs_idx <- c(which(dt$chrom %in% canonical_chrs), which(dt$chrom == "total"), which(dt$chrom == "autosomes"))
     dt <- dt[contigs_idx]
     dt <- dt[, sample := sample_name ]
     meancov_dt <- rbind(meancov_dt, dt)
   }
+
+  autosomes_cov <- meancov_dt[chrom == "autosomes"]
+  autosomes_cov[,chrom := NULL]
+  setnames(autosomes_cov, old = c("mean_cov","min_cov","max_cov"), new = c("mean_cov_autosomes","min_cov_autosomes","max_cov_autosomes"))
+
   meancov_dt$group <- group_name
-  summary_cov <- merge(meancov_dt[chrom == "total"], mincov_dt, by="sample", all.x=T)
+  total_cov <- meancov_dt[chrom == "total"]
+  total_cov[, chrom := NULL]
+  
+  summary_cov <- merge(total_cov, autosomes_cov, by="sample", all.x=T)
+  summary_cov <- merge(summary_cov, mincov_dt, by="sample", all.x=T)
   return(list(cumcov=cumcov_dt, meancov=meancov_dt,summarycov=summary_cov))
 }
 
@@ -655,10 +666,14 @@ option_list = list(
               help="set this to update the shiny app"),
   make_option(c("-t", "--by_tranche"), action="store_true",
               help="set this when qc results are organized by tranche. Multiple sub-folders are then expected in project_qc_dir"),
-  make_option(c("-f", "--align_filters"), action="store", default=NA, type='character',
+  make_option(c("-f", "--align_fails"), action="store", default=NA, type='character',
               help="Text file containing filter to apply to align one per line. Samples selected by any of these are marked as FAIL"),
-  make_option(c("-v", "--var_filters"), action="store", default=NA, type='character',
+  make_option(c("-v", "--var_fails"), action="store", default=NA, type='character',
               help="Text file containing filter to apply to vars one per line. Samples selected by any of these are marked as FAIL"),
+  make_option(c("-b", "--align_warnings"), action="store", default=NA, type='character',
+              help="Text file containing filter to apply to align one per line. Samples selected by any of these are marked as WARNING"),
+  make_option(c("-c", "--var_warnings"), action="store", default=NA, type='character',
+              help="Text file containing filter to apply to vars one per line. Samples selected by any of these are marked as WARNING"),
   make_option(c("-x", "--force_update"), action="store_true", default=FALSE,
               help="Set this to force update data even if already present in the RDS"),
   make_option(c("-w", "--var_qc_rds"), action="store", default=NA, type='character',
@@ -674,8 +689,10 @@ project_name = opt$project_name
 somalier_dir = opt$somalier_tsv_dir
 app_dir = opt$app_dir
 app_name = opt$app_name
-align_filters = opt$align_filters
-var_filters = opt$var_filters
+align_fails = opt$align_fails
+var_fails = opt$var_fails
+align_warnings = opt$align_warnings
+var_warnings = opt$var_warnings
 by_tranche = opt$by_tranche
 previous_var_rds = opt$var_qc_rds
 previous_align_rds = opt$align_qc_rds
@@ -693,15 +710,16 @@ if (!dir.exists(project_dir)) {
   quit(status = 1)
 }
 
-# Read alignements QC and apply filters -------------
+# Read alignments QC and apply filters -------------
 message("###############################")
 message("###  ALIGN QC DATA PROCESS  ###")
 message("###############################")
 qc_align_data <- read_alignment_QC(p,project_dir, somalier_dir, canonical_chrs, min_cov, by_tranche, previous_var_rds, force_update)
-qc_align_data$summary_qc$QC_pass_status <- "NOT_APPLIED"
+qc_align_data$summary_qc$QC_pass_status <- "PASS"
 
-message("### APPLY VARS FILTERS IF ANY ###")
-qc_align_data$summary_qc <- evaluate_filters(qc_align_data$summary_qc, align_filters)
+message("### APPLY ALIGN FILTERS IF ANY ###")
+qc_align_data$summary_qc <- evaluate_filters(qc_align_data$summary_qc, align_warnings, "WARNING")
+qc_align_data$summary_qc <- evaluate_filters(qc_align_data$summary_qc, align_fails, "FAIL")
 
 message("### STORE CURRENT TIMESTAMP ###")
 qc_align_data$last_update <- timestamp
@@ -715,10 +733,11 @@ message("###############################")
 message("###  VARS QC DATA PROCESS   ###")
 message("###############################")
 qc_vars_data <- read_vars_QC(p,project_dir, min_cov, min_qual, by_tranche, previous_var_rds, force_update)
-qc_vars_data$summary_qc$QC_pass_status <- "NOT_APPLIED"
+qc_vars_data$summary_qc$QC_pass_status <- "PASS"
 
 message("### APPLY VARS FILTERS IF ANY ###")
-qc_vars_data$summary_qc <- evaluate_filters(qc_vars_data$summary_qc, var_filters)
+qc_vars_data$summary_qc <- evaluate_filters(qc_vars_data$summary_qc, var_warnings, "WARNING")
+qc_vars_data$summary_qc <- evaluate_filters(qc_vars_data$summary_qc, var_fails, "FAIL")
 
 message("### STORE CURRENT TIMESTAMP ###")
 qc_vars_data$last_update <- timestamp

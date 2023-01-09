@@ -34,6 +34,10 @@ process coverage_WGS {
     export MOSDEPTH_Q4=HIGH_COV # 150..
 
     MOSDEPTH_PRECISION=4 mosdepth -n -t ${task.cpus} --quantize 0:1:5:10:150: ${sample} $bam_file
+    
+    #Create summary count for autosomes only
+    grep -P "^(chr){0,1}[0-9]+\t" ${sample}.mosdepth.summary.txt \
+        | awk -F"\\t" '{OFS="\\t"}; BEGIN { min = 0; max = 0 }; {size += \$2; bases += \$3}; \$5 > min {min = \$5}; \$6 > max {max = \$6}; END {print "autosomes",size,bases,bases/size,min,max}' >> ${sample}.mosdepth.summary.txt
     """
 }
 

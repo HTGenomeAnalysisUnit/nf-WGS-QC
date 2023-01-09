@@ -1,0 +1,2 @@
+Ts_Tv < 1.9 | Ts_Tv > 2.1
+charr_sd_from_mean > 3 & hetrate_sd_from_mean > 3

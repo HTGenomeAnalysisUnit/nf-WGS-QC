@@ -4,8 +4,10 @@ process PREPARE_SUMMARY {
     
     input:
         file(qc_data)
-        file(align_filters)
-        file(var_filters)
+        file(align_fails)
+        file(var_fails)
+        file(align_warnings)
+        file(var_warnings)
         file(previous_var_rds)
         file(previous_align_rds)
     
@@ -18,8 +20,10 @@ process PREPARE_SUMMARY {
         file("prepare_summary.log")
 
     script:
-    def align_filters_opt = align_filters.name == 'NO_FILE' ? '' : "--align_filters $align_filters"
-    def var_filters_opt = var_filters.name == 'NO_FILE' ? '' : "--var_filters $var_filters"
+    def align_fails_opt = align_fails.name == 'NO_FILE' ? '' : "--align_fails $align_fails"
+    def var_fails_opt = var_fails.name == 'NO_FILE' ? '' : "--var_fails $var_fails"
+    def align_warnings_opt = align_warnings.name == 'NO_FILE' ? '' : "--align_warnings $align_warnings"
+    def var_warnings_opt = var_warnings.name == 'NO_FILE' ? '' : "--var_warnings $var_warnings"
     def force_update_opt = params.force_update ? "--force_update" : ''
     def update_app_opt = params.update_app ? "--update_app" : ''
     def var_rds_opt = previous_var_rds.exists() ? "--var_qc_rds $previous_var_rds" : ''
@@ -31,8 +35,10 @@ process PREPARE_SUMMARY {
         --app_dir ${params.app_dir} \
         --app_name ${params.app_name} \
         --by_tranche \
-        $align_filters_opt \
-        $var_filters_opt \
+        $align_fails_opt \
+        $var_fails_opt \
+        $align_warnings_opt \
+        $var_warnings_opt \
         $var_rds_opt \
         $align_rds_opt \
         $force_update_opt \

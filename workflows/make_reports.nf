@@ -13,8 +13,10 @@ workflow MAKE_REPORTS_WF {
     somalier_labels = file(params.somalier_labels, checkIfExists: true)
     somalier_1kg_data = file(params.somalier_1kgdata, checkIfExists: true)
     manifest_file = file(params.project_manifest, checkIfExists: true)
-    align_filters_file = file(params.align_filters)
-    var_filters_file = file(params.var_filters)
+    align_fails_file = file(params.align_fails)
+    var_fails_file = file(params.var_fails)
+    align_warn_file = file(params.align_warnings)
+    var_warn_file = file(params.var_warnings)
     var_qc_rds = file(params.previous_var_qc_rds)
     align_qc_rds = file(params.previous_align_qc_rds)
 
@@ -63,6 +65,6 @@ workflow MAKE_REPORTS_WF {
         .collect()
         
     //Update summary and app
-    PREPARE_SUMMARY(full_tranche_data, file(params.align_filters, checkIfExists: true), file(params.var_filters, checkIfExists: true), var_qc_rds, align_qc_rds)
+    PREPARE_SUMMARY(full_tranche_data, align_fails_file, var_fails_file, align_warn_file, var_warn_file, var_qc_rds, align_qc_rds)
     }
 }
