@@ -1,1 +1,2 @@
 !is.na(related_samples)
+mean_cov < 19

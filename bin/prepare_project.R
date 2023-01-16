@@ -757,7 +757,7 @@ qc_merged <- merge(qc_align_merge, qc_vars_merge, by="sample", all.x=T)
 qc_merged <- qc_merged %>% mutate(pass_status=ifelse(align_pass_status == "FAIL" | vars_pass_status == "FAIL", "FAIL", "PASS"))
 
 qc_merged_counts <- qc_merged %>% group_by(group) %>%
-  summarise(n_samples=n(), n_pass=sum(pass_status == "PASS"), n_fail=sum(pass_status == "FAIL")) %>%
+  summarise(n_samples=n(), n_pass=sum(pass_status == "PASS", na.rm=T), n_fail=sum(pass_status == "FAIL", na.rm=T)) %>%
   mutate(fraction_fail=n_fail/n_samples)
 qc_merged_counts <- qc_merged_counts %>% add_row(
     group = "total", 

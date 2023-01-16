@@ -1,2 +1,1 @@
-charr_sd_from_mean > 3
 hetrate_sd_from_mean > 3
