@@ -1,2 +1,5 @@
 !is.na(related_samples)
 mean_cov < 19
+inferred_sex == "male" & (Y_depth_mean / X_depth_mean) < 0.8
+inferred_sex == "female" & (Y_depth_mean / X_depth_mean) > 0.2
+inferred_sex == "male" & X_het >= 10

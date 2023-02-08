@@ -370,6 +370,16 @@ read_mosdepth <- function(path, canonical_chrs, group_name, minCov) {
   message("### Path: ", path)
   mincov_dt <- NULL
   cumcov_dt <- NULL
+  tot_bases_dt <- NULL
+
+  files <- list.files(path, pattern="totbases")
+  for (f in files) {
+    message("Processing ", f)
+    dt <- fread(paste0(path,"/",f), header=T) 
+    dt$mean_cov_bases <- round(dt$N_bases / dt$Genome_size,2)
+    tot_bases_dt <- rbind(tot_bases_dt, dt)  
+  }
+
   files <- list.files(path, pattern="global.dist.txt")
   for (f in files) {
     message("Processing ", f)
@@ -410,6 +420,7 @@ read_mosdepth <- function(path, canonical_chrs, group_name, minCov) {
   
   summary_cov <- merge(total_cov, autosomes_cov, by="sample", all.x=T)
   summary_cov <- merge(summary_cov, mincov_dt, by="sample", all.x=T)
+  summary_cov <- merge(summary_cov, tot_bases_dt, by="sample", all.x=T)
   return(list(cumcov=cumcov_dt, meancov=meancov_dt,summarycov=summary_cov))
 }
 
@@ -523,7 +534,8 @@ read_somalier <- function(path, group_name) {
   setnames(pairs_dt, "#sample_a", "sample_a")
   pairs_dt$group <- group_name
   samples_dt <- fread(paste0(path, "/", group_name, ".samples.tsv"), header=T, 
-                      select=c("sample_id","original_pedigree_sex","X_depth_mean","Y_depth_mean","n_hom_ref","n_het","n_hom_alt"))
+                      select=c("sample_id","original_pedigree_sex","depth_mean","X_depth_mean","Y_depth_mean","X_het","n_hom_ref","n_het","n_hom_alt"))
+  samples_dt$scaled_X_depth <- (samples_dt$X_depth_mean / samples_dt$depth_mean) * 2
   samples_dt$group <- group_name
   setnames(samples_dt, "sample_id", "sample")
   message("Processing ", paste0(path, "/", group_name, ".somalier-ancestry.tsv"))
@@ -624,12 +636,12 @@ read_alignment_QC <- function(project_id, data_path, somalier_path, canonical_ch
                        readstats[[t]]$general[, !"group"], 
                        r_per_sample_wide, 
                        somalier[[t]]$ancestry[, .(sample,predicted_ancestry)], 
-                       somalier[[t]]$samples[, .(sample,original_pedigree_sex,X_depth_mean,Y_depth_mean)], 
+                       somalier[[t]]$samples[, .(sample,original_pedigree_sex,X_depth_mean,Y_depth_mean,scaled_X_depth,X_het)], 
                        somalier[[t]]$related_samples)
     merged_dt <- merge_tables(list_of_dt)
-    merged_dt$inferred_sex <- ifelse(
-      (merged_dt$Y_depth_mean / merged_dt$X_depth_mean) > 0.5 & (merged_dt$Y_depth_mean / merged_dt$X_depth_mean) < 1.5,
-      "male", "female")
+    merged_dt <- merged_dt %>% 
+      mutate(inferred_sex = ifelse(
+        (X_het < 5 & scaled_X_depth < 1.2) | (Y_depth_mean / X_depth_mean) >= 0.8 , "male", "female"))
     merged_dt$concordant_sex <- ifelse(merged_dt$inferred_sex == merged_dt$original_pedigree_sex, 1,0)
     merged_dt$group <- t
     summary_qc <- rbind(summary_qc, merged_dt)
@@ -749,25 +761,36 @@ save_tsv(qc_vars_data$summary_qc, paste0(project_dir,"/qc_vars_summary.tsv"))
 message("###############################")
 message("###  MAKE PROJECT SUMMARY   ###")
 message("###############################")
-qc_align_merge <- qc_align_data$summary_qc %>% select(sample,group,QC_pass_status)
-qc_vars_merge <- qc_vars_data$summary_qc %>% select(sample,QC_pass_status)
-setnames(qc_align_merge, "QC_pass_status", "align_pass_status")
-setnames(qc_vars_merge, "QC_pass_status", "vars_pass_status")
-qc_merged <- merge(qc_align_merge, qc_vars_merge, by="sample", all.x=T)
-qc_merged <- qc_merged %>% mutate(pass_status=ifelse(align_pass_status == "FAIL" | vars_pass_status == "FAIL", "FAIL", "PASS"))
+qc_align_fails <- qc_align_data$summary_qc %>% select(sample,group,FAIL_reason)
+qc_vars_fails <- qc_vars_data$summary_qc %>% select(sample,group,FAIL_reason)
+qc_details <- rbind(qc_align_fails, qc_vars_fails) 
+qc_details <- qc_details %>% group_by(sample,group) %>% 
+	summarise(FAIL_reason=paste(unique(FAIL_reason), collapse=";")) %>%
+	mutate(FAIL_reason=gsub("(;PASS|PASS;|;PASS;)","",FAIL_reason))
+qc_details <- qc_details %>% group_by(group,FAIL_reason) %>% 
+	summarise(N=n()) %>%
+	pivot_wider(names_from="FAIL_reason", values_from="N", values_fill=0)
+qc_details <- qc_details %>% relocate(PASS, .after=group)
+qc_details$FAIL <- rowSums(qc_details[,3:ncol(qc_details)])
+qc_details <- qc_details %>% relocate(FAIL, .after=PASS)
+qc_details$tot_samples <- qc_details$PASS + qc_details$FAIL
+qc_details <- qc_details %>% relocate(tot_samples, .after=group)
 
-qc_merged_counts <- qc_merged %>% group_by(group) %>%
-  summarise(n_samples=n(), n_pass=sum(pass_status == "PASS", na.rm=T), n_fail=sum(pass_status == "FAIL", na.rm=T)) %>%
-  mutate(fraction_fail=n_fail/n_samples)
-qc_merged_counts <- qc_merged_counts %>% add_row(
-    group = "total", 
-    n_samples = sum(qc_merged_counts$n_samples),
-    n_pass = sum(qc_merged_counts$n_pass),
-    n_fail = sum(qc_merged_counts$n_fail),
-    fraction_fail = sum(qc_merged_counts$n_fail)/sum(qc_merged_counts$n_samples)
-  )
-qc_merged_counts
-save_tsv(qc_merged_counts, paste0(project_dir,"/project_qc_summary.tsv"))
+header <- c("# FAIL REASONS")
+x <- 0
+for (n in 5:ncol(qc_details)) {
+	x <- x + 1
+	filter_tag <- colnames(qc_details)[n]
+	id <- paste0("F",x)
+	colnames(qc_details)[n] <- id
+	header <- c(header, paste0("# ", id, ": ", filter_tag))
+}
+qc_details <- rbind(as.data.frame(qc_details), c("Total", colSums(qc_details[,2:ncol(qc_details)])))
+qc_details <- qc_details %>% mutate(across(2:ncol(.), as.numeric))
+qc_details$fraction_FAIL <- round(qc_details$FAIL / qc_details$tot_samples,3)
+qc_details <- qc_details %>% relocate(fraction_FAIL, .after=FAIL)
+write(header, file=paste0(project_dir,"/project_qc_summary.tsv"), append=F)
+write.table(qc_details, file=paste0(project_dir,"/project_qc_summary.tsv"), sep="\t", row.names=F, quote=F, append=T)
 
 # Update shiny app data if requested ------------
 if (opt$update_app) {

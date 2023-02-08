@@ -12,7 +12,11 @@ re_exp_vars = re.compile('.+/qc_variants/')
 
 def symlink_files(row, source_dir, dest_dir):
     source_abs_path = os.path.abspath(source_dir)
-    files_in_tranche = glob(f"{source_abs_path}/**/{row['external_id']}*", recursive=True)
+    print(f"### - Sample: {row['external_id']}")
+    align_qc_files = glob(f"{source_abs_path}/qc_alignment/**/{row['external_id']}.*", recursive=True)
+    vars_qc_file = glob(f"{source_abs_path}/qc_variants/**/{row['external_id']}.*", recursive=True)
+    files_in_tranche = align_qc_files + vars_qc_file
+    
     for source_file in files_in_tranche:
         dirname = os.path.dirname(source_file)
         subdir = re.sub(re_exp_align,'qc_alignment/',dirname)
@@ -22,7 +26,7 @@ def symlink_files(row, source_dir, dest_dir):
         target_file = os.path.join(target_dir, basename)
         #print(f"file: {source_file}, subdir: {subdir}, target_dir: {target_dir}")
         os.makedirs(target_dir,exist_ok=True)
-        
+
         os.symlink(source_file, target_file)
 
 # Command line parser
@@ -68,6 +72,7 @@ for start, end in date_intervals:
     print(f"tranche dir: {tranche_dir}")
     if os.path.exists(tranche_dir):
         if args.force_update:
+            print(f"{tranche_dir} already present. Force update this one")
             shutil.rmtree(tranche_dir)
         else:
             print(f"{tranche_dir} already present. Skip this one")

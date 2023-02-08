@@ -13,6 +13,7 @@ if (params.mode == 'WGS') {
 }
 include { SOMALIER_EXTRACT } from "${projectDir}/modules/somalier" addParams( outdir: "${output_somalier}")
 include { COMPUTE_READSTATS } from "${projectDir}/modules/readstats" addParams( outdir: "${output_readstats}")
+include { COUNT_BASES } from "${projectDir}/modules/count_bases" addParams( outdir: "${output_coverage}")
 
 workflow RUN_ALIGNEMENTS_QC {
     take:
@@ -33,4 +34,5 @@ workflow RUN_ALIGNEMENTS_QC {
         SAMTOOLS_STATS(bamfiles)
         SOMALIER_EXTRACT(bamfiles.map{return tuple(it[1], it[2])}, somalier_varset, genome_ref)
         COMPUTE_READSTATS(bamfiles)
+        COUNT_BASES(bamfiles)
 }

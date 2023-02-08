@@ -68,3 +68,10 @@ workflow MAKE_REPORTS_WF {
     PREPARE_SUMMARY(full_tranche_data, align_fails_file, var_fails_file, align_warn_file, var_warn_file, var_qc_rds, align_qc_rds)
     }
 }
+
+//FIX SEX COMPUTE. 
+//MALE = X_het < 5 && scaled_X_depth < 1.2
+//PLOIDY CHECK AS MEAN_COV Y / MEAN_COV X
+
+//REPORT N FAIL SAMPLES FOR EACH FAIL REASON IN PROJECT SUMMARY REPORT.
+//CAN WE COUNT TOTAL SEQUENCED BASES FROM THE BAM FILES?
