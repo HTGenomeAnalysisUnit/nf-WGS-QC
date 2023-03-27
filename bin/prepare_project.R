@@ -738,6 +738,10 @@ qc_align_data$last_update <- timestamp
 
 message("### SAVE ALIGN QC REPORTS ###")
 saveRDS(qc_align_data, file = paste0(project_dir,"/qc_align.RDS"))
+# check if qc_align_summary.tsv exists and if so, rename it with the timestamp
+if (file.exists(paste0(project_dir,"/qc_align_summary.tsv"))) {
+  file.rename(paste0(project_dir,"/qc_align_summary.tsv"), paste0(project_dir,"/qc_align_summary_",timestamp,".tsv"))
+}
 save_tsv(qc_align_data$summary_qc, paste0(project_dir,"/qc_align_summary.tsv"))
 
 # Read variants QC and apply filters -------------
@@ -756,6 +760,11 @@ qc_vars_data$last_update <- timestamp
 
 message("### SAVE VARS QC REPORTS ###")
 saveRDS(qc_vars_data, file = paste0(project_dir,"/qc_vars.RDS"))
+
+# check if qc_vars_summary.tsv exists and if so, rename it with the timestamp
+if (file.exists(paste0(project_dir,"/qc_vars_summary.tsv"))) {
+  file.rename(paste0(project_dir,"/qc_vars_summary.tsv"), paste0(project_dir,"/qc_vars_summary_",timestamp,".tsv"))
+}
 save_tsv(qc_vars_data$summary_qc, paste0(project_dir,"/qc_vars_summary.tsv"))
 
 message("###############################")

@@ -11,7 +11,9 @@
 #SBATCH --chdir "/processing_data/shared_datasets/molisani/raw_data/WGS_QC_data"
 
 #Activate conda env
+echo "Activating conda env"
 eval "$(conda shell.bash hook)"
 conda activate pythonenv_latest
 
+echo "Running make_tranches_time.py"
 /project/alfredo/pipelines/nf-WGS-QC/bin/make_tranches_time.py --manifest_file bam_manifest.tsv --start_date 20221128 --force_update

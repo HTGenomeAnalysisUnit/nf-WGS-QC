@@ -40,13 +40,13 @@ workflow {
         bam_input_paths = file(params.bamlist)
             .readLines()
         bam_input_ch = Channel.fromList(bam_input_paths)
-            .map { it -> file("$it") }  
+            .map { it -> file("${it.split('\t')[1]}") }  
     }
     if (params.vcflist) {
         vcf_input_paths = file(params.vcflist)
             .readLines()
         vcf_input_ch = Channel.fromList(vcf_input_paths)
-            .map { it -> file("$it") }  
+            .map { it -> file("${it.split('\t')[1]}") }  
     }
     if (params.bamfiles) {
         bam_input_ch = Channel

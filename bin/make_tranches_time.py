@@ -1,5 +1,8 @@
 #!/usr/bin/env python
 
+print ("### - Make tranches by time - ###")
+print("### - Importing libraries - ###")
+
 import os, shutil
 from datetime import datetime, timedelta
 import pandas as pd
@@ -7,10 +10,12 @@ from glob import glob
 import re
 import argparse
 
+print("### - Program starts - ###")
+
 re_exp_align = re.compile('.+/qc_alignment/')
 re_exp_vars = re.compile('.+/qc_variants/')
 
-def symlink_files(row, source_dir, dest_dir):
+def symlink_files(row, source_dir, dest_dir, force_update):
     source_abs_path = os.path.abspath(source_dir)
     print(f"### - Sample: {row['external_id']}")
     align_qc_files = glob(f"{source_abs_path}/qc_alignment/**/{row['external_id']}.*", recursive=True)
@@ -26,8 +31,14 @@ def symlink_files(row, source_dir, dest_dir):
         target_file = os.path.join(target_dir, basename)
         #print(f"file: {source_file}, subdir: {subdir}, target_dir: {target_dir}")
         os.makedirs(target_dir,exist_ok=True)
-
-        os.symlink(source_file, target_file)
+        #check if file already exists and remove it eventually
+        if os.path.exists(target_file):
+            if force_update:
+                os.remove(target_file)
+            else:
+                continue
+        if not os.path.exists(target_file):
+            os.symlink(source_file, target_file)
 
 # Command line parser
 parser = argparse.ArgumentParser()
@@ -50,7 +61,7 @@ start_date = args.start_date
 days_interval = args.days_interval
 manifest_file = args.manifest_file
 
-
+print(f"Reading manifest file: {manifest_file}")
 df = pd.read_csv(manifest_file, sep="\t", names=['internal_id', 'external_id', 'date', 'file_path'], parse_dates=["date"])
 print(f"{len(df)} files found in {manifest_file}")
 
@@ -63,6 +74,9 @@ while range_start < current_date:
     range_end = range_start + timedelta(days=7)
     date_intervals.append((range_start, range_end))
     range_start = range_end
+
+# Filter df to only include samples with the most recent date
+df_most_recent = df.sort_values('date', ascending=False).drop_duplicates('external_id')
 
 # Symlink files in each interval and create counts report
 daily_counts_list = []
@@ -78,14 +92,15 @@ for start, end in date_intervals:
             print(f"{tranche_dir} already present. Skip this one")
             continue
     
-    
     pd_date_range = pd.date_range(start,end, inclusive='left')
-    samples_in_interval = df[df['date'].isin(pd_date_range)]
+    # For this we use df_most_recent to only include the most recent sample for each external_id
+    samples_in_interval = df_most_recent[df_most_recent['date'].isin(pd_date_range)]
     print(f"{len(samples_in_interval)} samples in this interval")
 
-    samples_in_interval.apply(lambda row: symlink_files(row, source_dir, tranche_dir), axis=1)
+    samples_in_interval.apply(lambda row: symlink_files(row, source_dir, tranche_dir, args.force_update), axis=1)
     
     # Count the number of rows for each day in the date range
+    # This is done on the original df to include all samples
     counts = df[df['date'].isin(pd_date_range)].groupby('date').size().reset_index(name='count')
 
     # Merge the counts with the date range to include zero values for days with no rows

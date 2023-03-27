@@ -46,14 +46,16 @@ workflow MAKE_REPORTS_WF {
     SOMALIER_ANCESTRY(tranches_ch.somalier, somalier_labels, somalier_1kg_data)
 
     //Report for alignment QC
-    qc_files = tranches_ch.coverage
-            .join(tranches_ch.sam_stats)
-            .join(SOMALIER_RELATE.out)
-            .join(SOMALIER_ANCESTRY.out.ancestry_tsv)
-            //.groupTuple()
-            //.view()
+    if (params.run_multiqc){
+        qc_files = tranches_ch.coverage
+                .join(tranches_ch.sam_stats)
+                .join(SOMALIER_RELATE.out)
+                .join(SOMALIER_ANCESTRY.out.ancestry_tsv)
+                //.groupTuple()
+                //.view()
             
-    MULTIQC(qc_files, file("${projectDir}/conf/multiqc_config.yaml"))
+        MULTIQC(qc_files, file("${projectDir}/conf/multiqc_config.yaml"))
+    }
 
     //Generate summarised data per tranche
     if (params.make_summary) {
