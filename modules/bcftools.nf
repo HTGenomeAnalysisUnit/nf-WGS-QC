@@ -181,7 +181,7 @@ process BCFTOOLS_INDEX {
 
     script:
     """
-    bcftools index $vcf_file
+    bcftools index -f $vcf_file
     """
 }
 

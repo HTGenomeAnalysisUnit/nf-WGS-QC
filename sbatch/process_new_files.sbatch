@@ -10,7 +10,7 @@
 #SBATCH --mem=4G
 #SBATCH --chdir "/processing_data/shared_datasets/molisani/raw_data/nf-manual-wf"
 
-module load nextflow/21.10.6
+module load nextflow/22.10.1
 
 #Create a list of new samples to process
 #ls /processing_data/shared_datasets/molisani/raw_data/wgs/bam/*/*.bam > filelist_bam

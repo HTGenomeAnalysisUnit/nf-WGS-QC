@@ -1,1 +1,3 @@
 hetrate_sd_from_mean > 3
+charr_sd_from_mean > 3 & hetrate_sd_from_mean > 3
+CHARR > 0.02 | INCONSISTENT_AB_HET_RATE > 0.1

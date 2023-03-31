@@ -326,7 +326,7 @@ read_vars_QC <- function(project_id, data_path, minDP, minQUAL, by_tranche=T, pr
 
     list_of_dt <- list(
       stats[[t]]$summary,
-      contamination[[t]][,.(sample, CHARR, HETEROZYGOSITY_RATE)]
+      contamination[[t]][,.(sample, CHARR, HETEROZYGOSITY_RATE, INCONSISTENT_AB_HET_RATE)]
     )
     merged_dt <- merge_tables(list_of_dt)
     
