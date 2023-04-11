@@ -189,7 +189,12 @@ read_stats_vars <- function(path, minDP, minQUAL) {
     sample_name <- gsub("\\.vars\\.stats","", f)
     sdata <- readVCFstat(paste0(path, "/", f), fileID = sample_name)
     res$by_sample[[sample_name]] <- sdata
-    
+
+    # Do not process sample data if any of the stats sections are empty
+    if (any(sapply(sdata, is.null))) {
+      message("Skipping sample ", sample_name, " due to missing stats data")
+      next
+    }
     #Compile a summary tab across all samples
     genos_above_mindp <- sdata$DP %>% 
       arrange(desc(as.numeric(bin))) %>% 
