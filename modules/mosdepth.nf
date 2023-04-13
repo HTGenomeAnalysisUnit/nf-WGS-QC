@@ -37,7 +37,7 @@ process coverage_WGS {
     
     #Create summary count for autosomes only
     grep -P "^(chr){0,1}[0-9]+\t" ${sample}.mosdepth.summary.txt \
-        | awk -F"\\t" '{OFS="\\t"}; BEGIN { min = 0; max = 0 }; {size += \$2; bases += \$3}; \$5 > min {min = \$5}; \$6 > max {max = \$6}; END {print "autosomes",size,bases,bases/size,min,max}' >> ${sample}.mosdepth.summary.txt
+        | awk -F"\\t" '{OFS="\\t"}; BEGIN { size = 1; bases = 0; min = 0; max = 0 }; {size += \$2; bases += \$3}; \$5 > min {min = \$5}; \$6 > max {max = \$6}; END {OFS="\\t"; print "autosomes",size,bases,bases/size,min,max}' >> ${sample}.mosdepth.summary.txt
     """
 }
 

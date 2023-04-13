@@ -393,6 +393,10 @@ read_mosdepth <- function(path, canonical_chrs, group_name, minCov) {
                 col.names=c("min_cov","value"), drop=c(1))
     dt[, sample := sample_name ]
     cumcov_dt <- rbind(cumcov_dt, dt)
+    if (max(dt$min_cov) < minCov) {
+      message("WARNING: minCov is higher than the max coverage in the file: ", f)
+      rbind(dt, list(minCov, 0, sample_name))
+    }
     mc <- dt[min_cov == minCov][, !"min_cov"]
     setnames(mc, "value", paste0("pct_bases_min_",minCov))
     mincov_dt <- rbind(mincov_dt, mc)
