@@ -167,10 +167,15 @@ read_contig_vars <- function(path, contigs) {
     message("Processing ", f)
     sample_name <- gsub("\\.varsPerContig\\.tsv","", f)
     dt <- fread(paste0(path, "/", f), header=F, col.names=c("contig","size","n_vars"))
-    idx <- which(dt$contig %in% contigs)
-    dt <- dt[idx]
-    dt$vars_per_Mb <- dt$n_vars / (dt$size / 1000000)
-    dt$sample <- sample_name
+    if (nrow(dt) == 0) {
+      message("No data for ", sample_name, "; setting to zero")
+      dt <- data.table(contig=contigs, size=0, n_vars=0, vars_per_Mb=0, sample=sample_name)
+    } else {
+      idx <- which(dt$contig %in% contigs)
+      dt <- dt[idx]
+      dt$vars_per_Mb <- dt$n_vars / (dt$size / 1000000)
+      dt$sample <- sample_name
+    }
     res$by_sample[[sample_name]] <- dt
     res$all_samples <- rbind(res$all_samples, dt)
   }
