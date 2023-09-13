@@ -655,7 +655,7 @@ read_alignment_QC <- function(project_id, data_path, somalier_path, canonical_ch
     merged_dt <- merge_tables(list_of_dt)
     merged_dt <- merged_dt %>% 
       mutate(inferred_sex = ifelse(
-        (X_het < 5 & scaled_X_depth < 1.2) | (Y_depth_mean / X_depth_mean) >= 0.8 , "male", "female"))
+        (X_het < 5 & scaled_X_depth < 1.2) | (Y_depth_mean / X_depth_mean) >= 0.8 | (scaled_X_depth < 1.5 & Y_depth_mean / X_depth_mean > 0.5), "male", "female"))
     merged_dt$concordant_sex <- ifelse(merged_dt$inferred_sex == merged_dt$original_pedigree_sex, 1,0)
     merged_dt$group <- t
     summary_qc <- rbind(summary_qc, merged_dt)

@@ -16,4 +16,4 @@ eval "$(conda shell.bash hook)"
 conda activate pythonenv_latest
 
 echo "Running make_tranches_time.py"
-/project/alfredo/pipelines/nf-WGS-QC/bin/make_tranches_time.py --manifest_file bam_manifest.tsv --start_date 20221128 --force_update
+/ssu/gassu/pipelines/nf-WGS-QC/bin/make_tranches_time.py --manifest_file bam_manifest.tsv --start_date 20230808 --force_update
