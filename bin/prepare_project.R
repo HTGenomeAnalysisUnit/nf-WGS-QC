@@ -14,6 +14,7 @@ min_cov <- 10
 min_qual <- 20
 canonical_chrs <- paste("chr",c(1:22,"X","Y","M","MT"), sep="")
 timestamp <- format(Sys.time(), "%Y/%m/%d %H:%M:%S")
+file_timestamp <- format(Sys.time(), "%Y%m%d_%H%M%S")
 
 # Helper functions -----------------
 `%nin%` <- Negate('%in%')
@@ -330,6 +331,10 @@ read_vars_QC <- function(project_id, data_path, minDP, minQUAL, by_tranche=T, pr
     tranche_path <- tranches[[t]]
     var_stats_path <- paste0(tranche_path,"/variant_stats")
     contamination_data_path <- paste0(tranche_path,"/contamination_stats")
+    if (!dir.exists(var_stats_path) | !dir.exists(contamination_data_path)) {
+      message("No variant QC data data found for ", t)
+      next
+    }
     stats[[t]] <- read_stats_vars(var_stats_path, minDP, minQUAL)
     vars_per_contig[[t]] <- read_contig_vars(var_stats_path, canonical_chrs)
     contamination[[t]] <- read_contamination_data(contamination_data_path)
@@ -719,7 +724,7 @@ align_fails = opt$align_fails
 var_fails = opt$var_fails
 align_warnings = opt$align_warnings
 var_warnings = opt$var_warnings
-by_tranche = opt$by_tranche
+by_tranche = ifelse(is.null(opt$by_tranche), FALSE, TRUE)
 previous_var_rds = opt$var_qc_rds
 previous_align_rds = opt$align_qc_rds
 force_update = opt$force_update
@@ -740,7 +745,7 @@ if (!dir.exists(project_dir)) {
 message("###############################")
 message("###  ALIGN QC DATA PROCESS  ###")
 message("###############################")
-qc_align_data <- read_alignment_QC(p,project_dir, somalier_dir, canonical_chrs, min_cov, by_tranche, previous_var_rds, force_update)
+qc_align_data <- read_alignment_QC(project_name,project_dir, somalier_dir, canonical_chrs, min_cov, by_tranche, previous_var_rds, force_update)
 qc_align_data$summary_qc$QC_pass_status <- "PASS"
 
 message("### APPLY ALIGN FILTERS IF ANY ###")
@@ -754,7 +759,7 @@ message("### SAVE ALIGN QC REPORTS ###")
 saveRDS(qc_align_data, file = paste0(project_dir,"/qc_align.RDS"))
 # check if qc_align_summary.tsv exists and if so, rename it with the timestamp
 if (file.exists(paste0(project_dir,"/qc_align_summary.tsv"))) {
-  file.rename(paste0(project_dir,"/qc_align_summary.tsv"), paste0(project_dir,"/qc_align_summary_",timestamp,".tsv"))
+  file.rename(paste0(project_dir,"/qc_align_summary.tsv"), paste0(project_dir,"/qc_align_summary_",file_timestamp,".tsv"))
 }
 save_tsv(qc_align_data$summary_qc, paste0(project_dir,"/qc_align_summary.tsv"))
 
@@ -762,37 +767,52 @@ save_tsv(qc_align_data$summary_qc, paste0(project_dir,"/qc_align_summary.tsv"))
 message("###############################")
 message("###  VARS QC DATA PROCESS   ###")
 message("###############################")
-qc_vars_data <- read_vars_QC(p,project_dir, min_cov, min_qual, by_tranche, previous_var_rds, force_update)
-qc_vars_data$summary_qc$QC_pass_status <- "PASS"
+qc_vars_data <- read_vars_QC(project_name,project_dir, min_cov, min_qual, by_tranche, previous_var_rds, force_update)
+if (!is.null(qc_vars_data$summary_qc)) {
+  qc_vars_data$summary_qc$QC_pass_status <- "PASS"
 
-message("### APPLY VARS FILTERS IF ANY ###")
-qc_vars_data$summary_qc <- evaluate_filters(qc_vars_data$summary_qc, var_warnings, "WARNING")
-qc_vars_data$summary_qc <- evaluate_filters(qc_vars_data$summary_qc, var_fails, "FAIL")
+  message("### APPLY VARS FILTERS IF ANY ###")
+  qc_vars_data$summary_qc <- evaluate_filters(qc_vars_data$summary_qc, var_warnings, "WARNING")
+  qc_vars_data$summary_qc <- evaluate_filters(qc_vars_data$summary_qc, var_fails, "FAIL")
 
-message("### STORE CURRENT TIMESTAMP ###")
-qc_vars_data$last_update <- timestamp
+  message("### STORE CURRENT TIMESTAMP ###")
+  qc_vars_data$last_update <- timestamp
 
-message("### SAVE VARS QC REPORTS ###")
-saveRDS(qc_vars_data, file = paste0(project_dir,"/qc_vars.RDS"))
+  message("### SAVE VARS QC REPORTS ###")
+  saveRDS(qc_vars_data, file = paste0(project_dir,"/qc_vars.RDS"))
 
-# check if qc_vars_summary.tsv exists and if so, rename it with the timestamp
-if (file.exists(paste0(project_dir,"/qc_vars_summary.tsv"))) {
-  file.rename(paste0(project_dir,"/qc_vars_summary.tsv"), paste0(project_dir,"/qc_vars_summary_",timestamp,".tsv"))
+  # check if qc_vars_summary.tsv exists and if so, rename it with the timestamp
+  if (file.exists(paste0(project_dir,"/qc_vars_summary.tsv"))) {
+    file.rename(paste0(project_dir,"/qc_vars_summary.tsv"), paste0(project_dir,"/qc_vars_summary_",file_timestamp,".tsv"))
+  }
+  save_tsv(qc_vars_data$summary_qc, paste0(project_dir,"/qc_vars_summary.tsv"))
 }
-save_tsv(qc_vars_data$summary_qc, paste0(project_dir,"/qc_vars_summary.tsv"))
 
 message("###############################")
 message("###  MAKE PROJECT SUMMARY   ###")
 message("###############################")
 qc_align_fails <- qc_align_data$summary_qc %>% select(sample,group,FAIL_reason)
-qc_vars_fails <- qc_vars_data$summary_qc %>% select(sample,group,FAIL_reason)
+if (!is.null(qc_vars_data$summary_qc)) {
+  qc_vars_fails <- qc_vars_data$summary_qc %>% select(sample,group,FAIL_reason)
+} else {
+   qc_vars_fails <- NULL
+}
 qc_details <- rbind(qc_align_fails, qc_vars_fails) 
 qc_details <- qc_details %>% group_by(sample,group) %>% 
 	summarise(FAIL_reason=paste(unique(FAIL_reason), collapse=";")) %>%
-	mutate(FAIL_reason=gsub("(;PASS|PASS;|;PASS;)","",FAIL_reason))
+	mutate(FAIL_reason=gsub("(;PASS|PASS;|;PASS;)","",FAIL_reason)) %>%
+  ungroup()
 qc_details <- qc_details %>% group_by(group,FAIL_reason) %>% 
-	summarise(N=n()) %>%
-	pivot_wider(names_from="FAIL_reason", values_from="N", values_fill=0)
+	summarise(N=n()) %>% ungroup()
+
+# in each group in qc_details, if FAIL_reason do not contain "PASS" then add a row with PASS and N=0
+for (g in unique(qc_details$group)) {
+  if (!"PASS" %in% qc_details$FAIL_reason[qc_details$group == g]) {
+    qc_details <- rbind(qc_details, data.frame(group=g,FAIL_reason="PASS",N=0))
+  }
+}
+
+qc_details <- qc_details %>% pivot_wider(names_from="FAIL_reason", values_from="N", values_fill=0)
 qc_details <- qc_details %>% relocate(PASS, .after=group)
 qc_details$FAIL <- rowSums(qc_details[,3:ncol(qc_details)])
 qc_details <- qc_details %>% relocate(FAIL, .after=PASS)

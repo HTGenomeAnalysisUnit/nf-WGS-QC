@@ -31,6 +31,7 @@ workflow MAKE_REPORTS_WF {
     }
 
     //Make channels per tranche for each data type
+    if (params.by_tranche) {
     tranches_ch = Channel
         .fromPath("${params.main_qc_dir}/*", type: 'dir')
         .multiMap { 
@@ -40,8 +41,18 @@ workflow MAKE_REPORTS_WF {
             var_stats: tuple(it.baseName, file("$it/qc_variants/variant_stats/*.vars.stats"), file("$it/qc_variants/variant_stats/*.varsPerContig.tsv"))
             full_tranche: tuple(it.baseName, it)
         }
+    } else {
+    tranches_ch = Channel
+        .fromPath("${params.main_qc_dir}")
+        .multiMap { 
+            somalier: tuple(params.project_id, file("$it/qc_alignment/somalier/*"))
+            coverage: tuple(params.project_id, file("$it/qc_alignment/coverage/**"))
+            sam_stats: tuple(params.project_id, file("$it/qc_alignment/mapflag_stats/*"))
+            var_stats: tuple(params.project_id, file("$it/qc_variants/variant_stats/*.vars.stats"), file("$it/qc_variants/variant_stats/*.varsPerContig.tsv"))
+            full_tranche: tuple(params.project_id, it)
+        }
+    }
 
-    //Run Somalier per tranche
     SOMALIER_RELATE(tranches_ch.somalier, ped_file)
     SOMALIER_ANCESTRY(tranches_ch.somalier, somalier_labels, somalier_1kg_data)
 

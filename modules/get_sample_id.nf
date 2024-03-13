@@ -11,7 +11,7 @@ process GET_SAMPLE_ID_BAM {
     script:
     """
     samtools view -H $bam_file \
-        | grep "@RG" | tr "\\t" "\\n" | grep "SM:" | sed 's/SM://' | sort -u | tr -d '\\n'
+        | grep "^@RG" | tr "\\t" "\\n" | grep "SM:" | sed 's/SM://' | sort -u | tr -d '\\n'
     """
 }
 
@@ -43,7 +43,7 @@ process GET_BAM_MANIFEST {
 
     script:
     """
-    sampleid=\$(samtools view -H $bam_file | grep "@RG" | tr "\\t" "\\n" | grep "SM:" | sed 's/SM://' | sort -u)
+    sampleid=\$(samtools view -H $bam_file | grep "^@RG" | tr "\\t" "\\n" | grep "SM:" | sed 's/SM://' | sort -u)
     file_date=\$(date -r $bam_file "+%Y%m%d")
     file_path=\$(readlink -f $bam_file)
     echo -e "\$sampleid\\t\$file_date\\t\$file_path" | tr -d '\\n'
