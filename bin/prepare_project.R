@@ -12,7 +12,7 @@ library(stringr)
 
 min_cov <- 10
 min_qual <- 20
-canonical_chrs <- paste("chr",c(1:22,"X","Y","M","MT"), sep="")
+canonical_chrs <- paste("chr",c(1:22,"X","Y","M"), sep="")
 timestamp <- format(Sys.time(), "%Y/%m/%d %H:%M:%S")
 file_timestamp <- format(Sys.time(), "%Y%m%d_%H%M%S")
 
@@ -27,7 +27,7 @@ evaluate_filters <- function(df, filters_file, tag) {
   if (!is.na(filters_file)) {
     df$tmp_col_reason <- "PASS"
     #df$QC_pass_status <- "PASS"
-    for (filter_string in scan(filters_file, what="", sep="\n")) {
+    for (filter_string in scan(filters_file, what="", sep="\n", comment.char="#")) {
       df <- df %>% 
         mutate(
           QC_pass_status = ifelse(
@@ -163,18 +163,26 @@ read_contig_vars <- function(path, contigs) {
   message("### Path: ", path)
   res <- list(by_sample=list(), all_samples=NULL)
   
-  files <- list.files(path, pattern = "varsPerContig.tsv")
+  files <- list.files(path, pattern = ".PASS.varsPerContig.tsv")
   for (f in files) {
     message("Processing ", f)
-    sample_name <- gsub("\\.varsPerContig\\.tsv","", f)
-    dt <- fread(paste0(path, "/", f), header=F, col.names=c("contig","size","n_vars"))
+    sample_name <- gsub("\\.PASS\\.varsPerContig\\.tsv","", f)
+    dt <- fread(paste0(path, "/", f), header=F, col.names=c("contig","size","n_PASS_vars"))
     if (nrow(dt) == 0) {
       message("No data for ", sample_name, "; setting to zero")
-      dt <- data.table(contig=contigs, size=0, n_vars=0, vars_per_Mb=0, sample=sample_name)
+      dt <- data.table(contig=contigs, size=0, n_PASS_vars=0, vars_per_Mb=0, sample=sample_name)
     } else {
       idx <- which(dt$contig %in% contigs)
       dt <- dt[idx]
-      dt$vars_per_Mb <- dt$n_vars / (dt$size / 1000000)
+      dt$vars_per_Mb <- dt$n_PASS_vars / (dt$size / 1000000)
+      # In case some of the requested contigs is missing in stats file we add them with zero counts
+      missing_contigs <- contigs[!contigs %in% dt$contig]
+      if (length(missing_contigs) > 0) {
+        message("Missing contigs for ", sample_name, ": ", paste(missing_contigs, collapse=","))
+        missing_dt <- data.table(contig=missing_contigs, size=0, n_PASS_vars=0, vars_per_Mb=0)
+        dt <- rbind(dt, missing_dt)
+      }
+      # Set the sample name
       dt$sample <- sample_name
     }
     res$by_sample[[sample_name]] <- dt
@@ -338,9 +346,14 @@ read_vars_QC <- function(project_id, data_path, minDP, minQUAL, by_tranche=T, pr
     stats[[t]] <- read_stats_vars(var_stats_path, minDP, minQUAL)
     vars_per_contig[[t]] <- read_contig_vars(var_stats_path, canonical_chrs)
     contamination[[t]] <- read_contamination_data(contamination_data_path)
+    no_vars_contigs <- as.data.table(vars_per_contig[[t]]$all_samples %>% 
+      filter(n_PASS_vars == 0) %>% group_by(sample) %>% 
+      summarise(contigs_with_zero_vars = paste(contig, collapse=",")) %>%
+      ungroup())
 
     list_of_dt <- list(
       stats[[t]]$summary,
+      no_vars_contigs,
       contamination[[t]][,.(sample, CHARR, HETEROZYGOSITY_RATE, INCONSISTENT_AB_HET_RATE)]
     )
     merged_dt <- merge_tables(list_of_dt)
@@ -650,9 +663,14 @@ read_alignment_QC <- function(project_id, data_path, somalier_path, canonical_ch
     message("### Create summary QC table ###")
     r_per_sample_wide <- as.data.table(readstats[[t]]$r_per_sample[, !"group"] %>% 
       pivot_wider(names_from = "metric", values_from = "n"))
+    no_reads_contigs <- as.data.table(samtools_stats[[t]]$idxstats %>% 
+      filter(n_mapped == 0) %>% group_by(sample) %>% 
+      summarise(contigs_with_zero_reads = paste(contig, collapse=",")) %>%
+      ungroup())
     list_of_dt <- list(coverage[[t]]$summarycov[, !"group"], 
                        samtools_stats[[t]]$flagstats[, .(sample, total, mapped, pct_mapped, primary, pct_primary, properly.paired, pct_properly.paired)], 
-                       readstats[[t]]$general[, !"group"], 
+                       readstats[[t]]$general[, !"group"],
+                       no_reads_contigs,
                        r_per_sample_wide, 
                        somalier[[t]]$ancestry[, .(sample,predicted_ancestry)], 
                        somalier[[t]]$samples[, .(sample,original_pedigree_sex,X_depth_mean,Y_depth_mean,scaled_X_depth,X_het)], 
@@ -814,19 +832,25 @@ for (g in unique(qc_details$group)) {
 
 qc_details <- qc_details %>% pivot_wider(names_from="FAIL_reason", values_from="N", values_fill=0)
 qc_details <- qc_details %>% relocate(PASS, .after=group)
-qc_details$FAIL <- rowSums(qc_details[,3:ncol(qc_details)])
+if (ncol(qc_details) == 2) {
+  qc_details$FAIL <- 0
+} else {
+  qc_details$FAIL <- rowSums(qc_details[,3:ncol(qc_details)])
+}
 qc_details <- qc_details %>% relocate(FAIL, .after=PASS)
 qc_details$tot_samples <- qc_details$PASS + qc_details$FAIL
 qc_details <- qc_details %>% relocate(tot_samples, .after=group)
 
 header <- c("# FAIL REASONS")
-x <- 0
-for (n in 5:ncol(qc_details)) {
-	x <- x + 1
-	filter_tag <- colnames(qc_details)[n]
-	id <- paste0("F",x)
-	colnames(qc_details)[n] <- id
-	header <- c(header, paste0("# ", id, ": ", filter_tag))
+if (ncol(qc_details) > 4) {
+  x <- 0
+  for (n in 5:ncol(qc_details)) {
+    x <- x + 1
+    filter_tag <- colnames(qc_details)[n]
+    id <- paste0("F",x)
+    colnames(qc_details)[n] <- id
+    header <- c(header, paste0("# ", id, ": ", filter_tag))
+  }
 }
 qc_details <- rbind(as.data.frame(qc_details), c("Total", colSums(qc_details[,2:ncol(qc_details)])))
 qc_details <- qc_details %>% mutate(across(2:ncol(.), as.numeric))
@@ -848,8 +872,9 @@ if (opt$update_app) {
 
   server = Sys.getenv("RSCONNECT_SERVER")
   key = Sys.getenv("RSCONNECT_APIKEY")
-  connectApiUser(account = "deploy_account", apiKey = key, quiet = FALSE, server=server)
-  deployApp(appDir=app_dir, appName=app_name, account="deploy_account", logLevel="normal",upload=T)
+  addServer(server, name="connect-server")
+  connectApiUser(account = "deploy_account", apiKey = key, quiet = FALSE, server="connect-server")
+  deployApp(appDir=app_dir, appName=app_name, account="deploy_account", server="connect-server", logLevel="normal",upload=T, forceUpdate = TRUE)
 }
 
 message("### All done! ###")

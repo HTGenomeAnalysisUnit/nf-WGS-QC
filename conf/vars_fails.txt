@@ -1,2 +1,3 @@
 Ts_Tv < 1.9 | Ts_Tv > 2.1
 CHARR > 0.03 | INCONSISTENT_AB_HET_RATE > 0.15
+!is.na(contigs_with_zero_vars)

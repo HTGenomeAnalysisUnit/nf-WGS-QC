@@ -46,6 +46,6 @@ process PREPARE_SUMMARY {
         $force_update_opt \
         $update_app_opt
     
-    cp .command.log prepare_summary.log
+    cp .command.out prepare_summary.log
     """
 }

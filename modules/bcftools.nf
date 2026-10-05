@@ -193,12 +193,16 @@ process BCFTOOLS_IDX_STATS {
         tuple val(sample), file(vcf_file), file(vcf_index)
 
     output:
-        tuple val(sample), file("${sample}.varsPerContig.tsv")
+        tuple val(sample), file("${sample}.varsPerContig.tsv"), emit: vars_stats
+        tuple val(sample), file("${sample}.PASS.varsPerContig.tsv"), emit: pass_vars_stats
 
     script:
     def make_index = vcf_index.exists() ? '' : "bcftools index $vcf_file"
     """
     $make_index
+    bcftools view -f "PASS,." -Ob -o PASS_vars.bcf $vcf_file
+    bcftools index PASS_vars.bcf
+    bcftools index --stats PASS_vars.bcf > ${sample}.PASS.varsPerContig.tsv
     bcftools index --stats $vcf_file > ${sample}.varsPerContig.tsv
     """
 }

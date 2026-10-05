@@ -62,7 +62,7 @@ workflow {
         bam_files = SAMTOOLS_INDEX(bam_input_ch)
     } else {
         bam_files = bam_input_ch
-            .map { bam_file -> tuple(bam_file, file("${bam_file}.bai", checkIfExists: true) }
+            .map { bam_file -> tuple(bam_file, file("${bam_file}.bai", checkIfExists: true)) }
     }
     GET_SAMPLE_ID_BAM(bam_files)
     GET_BAM_MANIFEST(bam_files)
@@ -71,7 +71,7 @@ workflow {
         vcf_files = BCFTOOLS_INDEX(vcf_input_ch)
     } else {
         vcf_files = vcf_input_ch
-            .map { vcf_file -> tuple(vcf_file, file("${vcf_file}.${params.vcf_index_type}", checkIfExists: true) }
+            .map { vcf_file -> tuple(vcf_file, file("${vcf_file}.${params.vcf_index_type}", checkIfExists: true)) }
     }
     GET_SAMPLE_ID_VCF(vcf_files)
     GET_VCF_MANIFEST(vcf_files)
