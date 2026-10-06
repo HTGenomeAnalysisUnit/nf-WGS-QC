@@ -1,0 +1,79 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/modules/meta-schema.json
+# # TODO nf-core: Add a description of the module and list keywords
+name: "bcftools_idxstats"
+description: write your description here
+keywords:
+  - sort
+  - example
+  - genomics
+tools:
+  ## TODO nf-core: Add a description and other details for the software below
+  - "bcftools":
+      description:
+        "BCFtools is a set of utilities that manipulate variant calls in
+        the Variant Call Format (VCF) and its binary counterpart BCF. All commands work
+        transparently with both VCFs and BCFs, both uncompressed and BGZF-compressed.\
+        \  Most commands accept VCF, bgzipped VCF and BCF with filetype detected automatically
+        even when streaming from a pipe. Indexed VCF and BCF will work in all situations.
+        Un-indexed VCF and BCF and streams will work in most, but not all situations."
+      homepage: "None"
+      documentation: "None"
+      tool_dev_url: "None"
+      doi: ""
+      licence: ["GPL", "GPL v3-or-later"]
+      identifier: biotools:bcftools
+
+input:
+  # TODO nf-core: Update the information obtained from bio.tools and make sure that it is correct
+  - - meta:
+        type: map
+        description: Groovy Map containing sample information. e.g. `[
+          id:'sample1' ]`
+    - sequence_variations:
+        type: file
+        description: sequence_variations file
+        pattern: "*.{vcf,bcf}"
+        ontologies:
+          - edam: http://edamontology.org/data_3498 # Sequence variations
+          - edam: http://edamontology.org/format_3016 # VCF
+          - edam: http://edamontology.org/format_3020 # BCF
+output:
+  # TODO nf-core: Update the information obtained from bio.tools and make sure that it is correct
+  sequence_variations:
+    - - meta:
+          type: map
+          description: Groovy Map containing sample information. e.g. `[
+            id:'sample1' ]`
+      - "*.{vcf,bcf}":
+          type: file
+          description: sequence_variations file
+          pattern: "*.{vcf,bcf}"
+          ontologies:
+            - edam: http://edamontology.org/data_3498 # Sequence variations
+            - edam: http://edamontology.org/format_3016 # VCF
+            - edam: http://edamontology.org/format_3020 # BCF
+  versions_bcftools:
+    - - ${task.process}:
+          type: string
+          description: The name of the process
+      - bcftools:
+          type: string
+          description: The name of the tool
+      - bcftools --version:
+          type: eval
+          description: The expression to obtain the version of the tool
+topics:
+  versions:
+    - - ${task.process}:
+          type: string
+          description: The name of the process
+      - bcftools:
+          type: string
+          description: The name of the tool
+      - bcftools --version:
+          type: eval
+          description: The expression to obtain the version of the tool
+authors:
+  - "@edg1983"
+maintainers:
+  - "@edg1983"
