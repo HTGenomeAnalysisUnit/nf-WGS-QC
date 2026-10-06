@@ -1,0 +1,62 @@
+{
+  "name": "",
+  "homePage": "",
+  "repos": {
+    "https://github.com/nf-core/modules.git": {
+      "modules": {
+        "nf-core": {
+          "bcftools/index": {
+            "branch": "master",
+            "git_sha": "feef37435aea56816adf4b3bde1fc76aac327a8d",
+            "installed_by": ["modules"]
+          },
+          "bcftools/stats": {
+            "branch": "master",
+            "git_sha": "feef37435aea56816adf4b3bde1fc76aac327a8d",
+            "installed_by": ["modules"]
+          },
+          "echtvar/anno": {
+            "branch": "master",
+            "git_sha": "3ae65622c8c8e6ab8390a73dd75a698308a4971b",
+            "installed_by": ["modules"]
+          },
+          "mosdepth": {
+            "branch": "master",
+            "git_sha": "999b9db1d6b8bdc591e1168e183f4cc87d6606f9",
+            "installed_by": ["modules"]
+          },
+          "multiqc": {
+            "branch": "master",
+            "git_sha": "98403d15b0e50edae1f3fec5eae5e24982f1fade",
+            "installed_by": ["modules"]
+          },
+          "samtools/index": {
+            "branch": "master",
+            "git_sha": "9339809fcb90af8a8b7051e6cd914894d5c52002",
+            "installed_by": ["modules"]
+          },
+          "samtools/stats": {
+            "branch": "master",
+            "git_sha": "9339809fcb90af8a8b7051e6cd914894d5c52002",
+            "installed_by": ["modules"]
+          },
+          "somalier/ancestry": {
+            "branch": "master",
+            "git_sha": "feef37435aea56816adf4b3bde1fc76aac327a8d",
+            "installed_by": ["modules"]
+          },
+          "somalier/extract": {
+            "branch": "master",
+            "git_sha": "6d46786420b4d7bc88eba026eb389c0c5535d120",
+            "installed_by": ["modules"]
+          },
+          "somalier/relate": {
+            "branch": "master",
+            "git_sha": "6d46786420b4d7bc88eba026eb389c0c5535d120",
+            "installed_by": ["modules"]
+          }
+        }
+      }
+    }
+  }
+}

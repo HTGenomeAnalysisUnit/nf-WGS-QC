@@ -1,1 +1,6 @@
+# Test runs
 test/
+
+# Nextflow files
+work/
+.nextflow*
