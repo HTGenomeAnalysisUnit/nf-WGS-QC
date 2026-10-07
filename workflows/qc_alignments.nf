@@ -1,38 +1,41 @@
-nextflow.enable.dsl=2
-
+/*
 output_somalier = file("${params.outdir}/somalier")
 output_readstats = file("${params.outdir}/readstats")
 output_coverage = file("${params.outdir}/coverage")
 output_mapflagstats = file("${params.outdir}/mapflag_stats")
+*/
 
-include { SAMTOOLS_STATS } from "${projectDir}/modules/samtools" addParams( outdir: "${output_mapflagstats}")
-if (params.mode == 'WGS') {
-    include { coverage_WGS as COVERAGE } from "${projectDir}/modules/mosdepth" addParams( outdir: "${output_coverage}")
-} else if (params.mode == 'WES') {
-    include { coverage_WES as COVERAGE } from "${projectDir}/modules/mosdepth" addParams( outdir: "${output_coverage}")
-}
-include { SOMALIER_EXTRACT } from "${projectDir}/modules/somalier" addParams( outdir: "${output_somalier}")
-include { COMPUTE_READSTATS } from "${projectDir}/modules/readstats" addParams( outdir: "${output_readstats}")
-include { COUNT_BASES } from "${projectDir}/modules/count_bases" addParams( outdir: "${output_coverage}")
+include { SAMTOOLS_STATS } from "../modules/nf-core/samtools/stats"
+include { SAMTOOLS_IDXSTATS } from "../modules/nf-core/samtools/idxstats"
+include { MOSDEPTH } from "../modules/nf-core/mosdepth" 
+include { SOMALIER_EXTRACT } from "../modules/nf-core/somalier/extract" 
+include { QUICK_READS_STATS } from "../modules/local/qrs" 
 
 workflow RUN_ALIGNEMENTS_QC {
     take:
-        /* a tuple containing bam files
-        [sample, file.bam, file.bam.bai] */ 
-        bamfiles
-        regions
-        somalier_varset
-        genome_ref
+        bamfiles // [meta, file(bam), file(bai)]
+        regions_file // file(bed)
+        genome_fasta // file(genome.fasta)
+        genome_fai // file(genome.fasta.fai)
+        somalier_varset // file(somalier_variants.vcf.gz)
         
     main:
-        if (params.mode == 'WGS') {
-            COVERAGE(bamfiles)
-        } else if (params.mode == 'WES') {
-            regions_file = file(regions, checkIfExists: true)
-            COVERAGE(bamfiles, regions_file)
-        }
-        SAMTOOLS_STATS(bamfiles)
-        SOMALIER_EXTRACT(bamfiles.map{return tuple(it[1], it[2])}, somalier_varset, genome_ref)
-        COMPUTE_READSTATS(bamfiles)
-        COUNT_BASES(bamfiles)
+        mosdepth_input = bamfiles.combine(regions_file)
+        MOSDEPTH(mosdepth_input, ['genome_fasta', genome_fasta], params.mosdepth_quantize_bins)
+        SAMTOOLS_STATS(bamfiles, ['ref_genome', genome_fasta, genome_fai])
+        SAMTOOLS_IDXSTATS(bamfiles)
+        SOMALIER_EXTRACT(bamfiles, ['genome_fasta', genome_fasta], ['genome_fai', genome_fai], ['somalier_varset', somalier_varset])
+        QUICK_READS_STATS(bamfiles)
+
+    emit:
+        output_coverage = MOSDEPTH.out
+        output_mapflagstats = SAMTOOLS_STATS.out
+        output_somalier = SOMALIER_EXTRACT.out
+        output_readstats = QUICK_READS_STATS.out
+
+    publish:
+        output_coverage
+        output_mapflagstats
+        output_somalier
+        output_readstats
 }

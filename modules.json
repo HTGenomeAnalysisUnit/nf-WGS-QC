@@ -30,6 +30,11 @@
             "git_sha": "98403d15b0e50edae1f3fec5eae5e24982f1fade",
             "installed_by": ["modules"]
           },
+          "samtools/idxstats": {
+            "branch": "master",
+            "git_sha": "9339809fcb90af8a8b7051e6cd914894d5c52002",
+            "installed_by": ["modules"]
+          },
           "samtools/index": {
             "branch": "master",
             "git_sha": "9339809fcb90af8a8b7051e6cd914894d5c52002",
