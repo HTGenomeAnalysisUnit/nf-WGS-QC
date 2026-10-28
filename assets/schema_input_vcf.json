@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "",
+  "title": "nf-WGS-QC - params.input_vcf schema",
+  "description": "Schema for the file provided with params.input_vcf",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "properties": {
+      "sample": {
+        "type": ["string", "integer"],
+        "pattern": "^\\S+$",
+        "errorMessage": "Sample name must be provided and cannot contain spaces",
+        "meta": ["id"]
+      },
+      "sex": {
+        "type": ["string", "integer"],
+        "enum": ["M", "F", "NA", 0, 1, 2],
+        "errorMessage": "Sex must be provided in the format M/F/NA or 1/2/0",
+        "default": "0",
+        "meta": ["sex"]
+      },
+      "batch_label": {
+        "type": ["string", "integer"],
+        "default": "project_batch",
+        "pattern": "^\\S+$",
+        "errorMessage": "Identifier of the sample batch",
+        "meta": ["batch_id"]
+      },
+      "variant_file": {
+        "type": "string",
+        "format": "file-path",
+        "exists": true,
+        "pattern": "^([\\S\\s]*\\/)?[^\\s\\/]+\\.(vcf|bcf)(\\.gz)?$",
+        "errorMessage": "Variant file must be provided, cannot contain spaces and must have extension '.vcf', '.bcf' or '.vcf.gz'"
+      },
+      "regions_bed": {
+        "type": "string",
+        "format": "file-path",
+        "exists": true,
+        "pattern": "^([\\S\\s]*\\/)?[^\\s\\/]+\\.bed(\\.gz)?$",
+        "errorMessage": "When provided, regions BED file cannot contain spaces and must have extension '.bed' or '.bed.gz'"
+      }
+    },
+    "required": ["sample", "variant_file"]
+  }
+}

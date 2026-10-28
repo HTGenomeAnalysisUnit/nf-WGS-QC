@@ -35,6 +35,7 @@ process MOSDEPTH {
     def prefix = task.ext.prefix ?: "${meta.id}"
     def reference = fasta ? "--fasta ${fasta}" : ""
     def interval = bed ? "--by ${bed}" : ""
+    def mosdepth_precision_env_var = params.mosdepth_precision ? "MOSDEPTH_PRECISION=${params.mosdepth_precision}" : ""
     def quantize_env_vars = []
     if (quantize_labels instanceof List && quantize_labels.size() > 0) {
         quantize_labels.eachWithIndex { label, index ->
@@ -49,7 +50,7 @@ process MOSDEPTH {
     }
 
     """
-    ${quantize_env_vars.join(" ")} mosdepth \\
+    ${mosdepth_precision_env_var} ${quantize_env_vars.join(" ")} mosdepth \\
         --threads $task.cpus \\
         $interval \\
         $reference \\

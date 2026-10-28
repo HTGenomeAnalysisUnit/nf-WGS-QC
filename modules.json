@@ -10,9 +10,9 @@
             "git_sha": "feef37435aea56816adf4b3bde1fc76aac327a8d",
             "installed_by": ["modules"]
           },
-          "bcftools/stats": {
+          "bcftools/view": {
             "branch": "master",
-            "git_sha": "feef37435aea56816adf4b3bde1fc76aac327a8d",
+            "git_sha": "b574a8bc9e9a536780339f1812b7492340ae36da",
             "installed_by": ["modules"]
           },
           "echtvar/anno": {
@@ -56,6 +56,11 @@
             "installed_by": ["modules"]
           },
           "somalier/relate": {
+            "branch": "master",
+            "git_sha": "6d46786420b4d7bc88eba026eb389c0c5535d120",
+            "installed_by": ["modules"]
+          },
+          "verifybamid/verifybamid2": {
             "branch": "master",
             "git_sha": "6d46786420b4d7bc88eba026eb389c0c5535d120",
             "installed_by": ["modules"]

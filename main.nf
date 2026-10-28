@@ -1,128 +1,261 @@
-nextflow.enable.dsl=2
-
-main_outdir = params.outdir ? params.outdir : "QC"
-outdir = params.project_id ? "${main_outdir}/${params.project_id}" : "${main_outdir}"
-file(outdir).mkdirs()
-outdir_align = "${outdir}/qc_alignment"
-outdir_vars = "${outdir}/qc_variants"
-outdir_bamindex = "${outdir}/bam_index"
-outdir_vcfindex = "${outdir}/vcf_index"
-
-include { RUN_ALIGNEMENTS_QC } from "${projectDir}/workflows/qc_alignments" addParams( outdir: "${outdir_align}")
-include { RUN_VARIANTS_QC } from "${projectDir}/workflows/qc_variants" addParams( outdir: "${outdir_vars}")
-include { GET_SAMPLE_ID_BAM; GET_SAMPLE_ID_VCF } from "${projectDir}/modules/get_sample_id"
-include { GET_BAM_MANIFEST; GET_VCF_MANIFEST } from "${projectDir}/modules/get_sample_id"
-include { MAKE_REPORTS_WF } from "${projectDir}/workflows/make_reports"
-include { SAMTOOLS_INDEX } from "${projectDir}/modules/samtools" addParams( outdir: "${outdir_bamindex}")
-include { BCFTOOLS_INDEX } from "${projectDir}/modules/bcftools" addParams( outdir: "${outdir_vcfindex}")
+include { completionSummary } from "./modules/local/pipeline_utils"
+include { validateParameters; paramsSummaryLog } from 'plugin/nf-schema'
+include { ALIGNMENTS_QC } from "./workflows/qc_alignments"
+include { VARIANTS_QC } from "./workflows/qc_variants"
+// include { MAKE_REPORTS_WF } from "${projectDir}/workflows/make_reports"
 
 workflow {
-        log.info """\
-    =============================================
-         WGS QC    -    N F   P I P E L I N E    
-    =============================================
-    bam files   : ${params.bamfiles ? params.bamfiles : "NO BAM files"}
-    VCF files   : ${params.vcffiles ? params.vcffiles : "NO VCF files"}
-    VCF index   : ${params.vcf_index_type}
-    mode        : ${params.mode}
-    genome      : ${params.genome}
-    ${params.regions ? "regions: ${params.regions}" : ''}
-    outdir      : ${outdir}
-    =============================================
-    """
-    .stripIndent()
+    main:
+        // -- BAM FILES QC --
+        if (params.input_bam) {        
+            ALIGNMENTS_QC() 
+        } 
 
-    // Set input files channels
-    //bamfiles/vcffiles is a glob of multiple files
-    bam_input_ch = Channel.empty()
-    vcf_input_ch = Channel.empty()
-    if (params.bamlist) {
-        bam_input_paths = file(params.bamlist)
-            .readLines()
-        bam_input_ch = Channel.fromList(bam_input_paths)
-            .map { it -> file("${it.split('\t')[1]}") }  
+        // -- VCF FILES QC --
+        if (params.input_vcf) {
+            VARIANTS_QC()
+        }
+
+        // -- CLOSING OPERATIONS --
+        // Store complete input params in a YAML file
+        def pipeline_inputs_dir = "${params.outdir}/pipeline_inputs"
+        channel
+            .fromList(params.entrySet())
+            .map { entry -> "${entry.key}: ${entry.value}" }
+            .collectFile(name: 'params.yml', storeDir: pipeline_inputs_dir, newLine: true)
+
+        // Store tool versions in a YAML file
+        channel.topic('versions')
+            .map { process, tool, version ->
+                [ process[process.lastIndexOf(':')+1..-1], "  ${tool}: ${version}" ]
+            }
+            .groupTuple(by: 0)
+            .map { process, tool_versions ->
+                tool_versions.unique().sort()
+                "${process}:\n${tool_versions.join('\n')}"
+            }
+            .collectFile(name: 'collated_versions.yml', newLine: true, storeDir: pipeline_inputs_dir)
+
+        // Log completion status
+        workflow.onComplete {
+            completionSummary()
+        }
+
+    publish:
+        // -- ALIGNMENTS QC OUTPUTS --
+        // coverage outputs
+        coverage_main_files = (
+            params.input_bam 
+            ? ALIGNMENTS_QC.out.coverage_global.mix(
+                ALIGNMENTS_QC.out.coverage_summary, 
+                ALIGNMENTS_QC.out.coverage_regions
+            )
+            : channel.empty()
+        ).map{ meta, output_file -> meta + [output_file: output_file] }
+            
+        coverage_detailed_files = (
+            params.input_bam 
+            ? ALIGNMENTS_QC.out.coverage_regions_bed.mix(
+                ALIGNMENTS_QC.out.coverage_per_base_d4,
+                ALIGNMENTS_QC.out.coverage_per_base_bed,
+                ALIGNMENTS_QC.out.coverage_quantized_bed, 
+                ALIGNMENTS_QC.out.coverage_thresholds_bed
+            )
+            : channel.empty()
+        ).map{ meta, output_file -> meta + [output_file: output_file] }
+        coverage_index_files =  (
+            params.input_bam 
+            ? ALIGNMENTS_QC.out.coverage_per_base_csi.mix(
+                ALIGNMENTS_QC.out.coverage_regions_csi,
+                ALIGNMENTS_QC.out.coverage_quantized_csi,
+                ALIGNMENTS_QC.out.coverage_thresholds_csi
+            )
+            : channel.empty()
+        ).map{ meta, output_file -> meta + [output_file: output_file] }
+
+        // samtools outputs
+        samtools_stats = (
+            params.input_bam 
+            ? ALIGNMENTS_QC.out.samtools_stats
+            : channel.empty()
+        ).map{ meta, output_file -> meta + [output_file: output_file] }
+        samtools_idxstats = (
+            params.input_bam 
+            ? ALIGNMENTS_QC.out.samtools_idxstats
+            : channel.empty()
+        ).map{ meta, output_file -> meta + [output_file: output_file] }
+
+        // somalier outputs
+        somalier_extract = (
+            params.input_bam 
+            ? ALIGNMENTS_QC.out.somalier_extract
+            : channel.empty()
+        ).map{ meta, output_file -> meta + [output_file: output_file] }
+
+        // quick read stats output
+        qrs_run_files = (
+            params.input_bam 
+            ? ALIGNMENTS_QC.out.qrs_per_sample_run.mix(ALIGNMENTS_QC.out.qrs_rundetails)
+            : channel.empty()
+        ).map{ meta, output_file -> meta + [output_file: output_file] }
+        qrs_read_stats = (
+            params.input_bam 
+            ? ALIGNMENTS_QC.out.qrs_read_stats
+            : channel.empty()
+        ).map{ meta, output_file -> meta + [output_file: output_file] }
+
+        // bam manifest file
+        bam_manifest = (
+            params.input_bam 
+            ? ALIGNMENTS_QC.out.bam_manifest
+            : channel.empty()
+        )
+        sample_to_user_map = (
+            params.input_bam 
+            ? ALIGNMENTS_QC.out.sample_to_user_map
+            : channel.empty()
+        )
+
+        // -- VCF QC OUTPUTS --
+        charr_stats = (
+            params.input_vcf 
+            ? VARIANTS_QC.out.charr_stats
+            : channel.empty()
+        ).map{ meta, output_file -> meta + [output_file: output_file] }
+        bcftools_stats = (
+            params.input_vcf 
+            ? VARIANTS_QC.out.bcftools_stats
+            : channel.empty()
+        ).map{ meta, output_file -> meta + [output_file: output_file] }
+        bcftools_stats_regions = (
+            params.input_vcf 
+            ? VARIANTS_QC.out.bcftools_stats_regions
+            : channel.empty()
+        ).map{ meta, output_file -> meta + [output_file: output_file] }
+        bcftools_idxstats = (
+            params.input_vcf 
+            ? VARIANTS_QC.out.bcftools_idxstats
+            : channel.empty()
+        ).map{ meta, output_file -> meta + [output_file: output_file] }
+}
+
+output {
+    coverage_main_files {
+        enabled (params.input_bam ? true : false)
+        path 'qc_alignments/coverage/summary'
+        index {
+            path 'qc_alignments/published_files_manifest/coverage_summary.csv'
+            header true
+            sep '\t'
+        }
     }
-    if (params.vcflist) {
-        vcf_input_paths = file(params.vcflist)
-            .readLines()
-        vcf_input_ch = Channel.fromList(vcf_input_paths)
-            .map { it -> file("${it.split('\t')[1]}") }  
+    coverage_detailed_files {
+        enabled (params.input_bam ? true : false)
+        path 'qc_alignments/coverage/detailed'
+        index {
+            path 'qc_alignments/published_files_manifest/coverage_detailed.csv'
+            header true
+            sep '\t'
+        }
     }
-    if (params.bamfiles) {
-        bam_input_ch = Channel
-            .watchPath(params.bamfiles, 'create,modify')
+    coverage_index_files {
+        enabled (params.input_bam ? true : false)
+        path 'qc_alignments/coverage/detailed'
     }
-    if (params.vcffiles) {
-        vcf_input_ch = Channel
-            .watchPath(params.vcffiles, 'create,modify')
+    samtools_stats {
+        enabled (params.input_bam ? true : false)
+        path 'qc_alignments/samtools/stats'
+        index {
+            path 'qc_alignments/published_files_manifest/samtools_stats.csv'
+            header true
+            sep '\t'
+        }
+    }
+    samtools_idxstats {
+        enabled (params.input_bam ? true : false)
+        path 'qc_alignments/samtools/idxstats'
+        index {
+            path 'qc_alignments/published_files_manifest/samtools_idxstats.csv'
+            header true
+            sep '\t'
+        }
+    }
+    somalier_extract {
+        enabled (params.input_bam ? true : false)
+        path 'qc_alignments/somalier/extract'
+        index {
+            path 'qc_alignments/published_files_manifest/somalier_extract.csv'
+            header true
+            sep '\t'
+        }
+    }
+    qrs_run_files {
+        enabled (params.input_bam ? true : false)
+        path 'qc_alignments/qrs/run_files'
+        index {
+            path 'qc_alignments/published_files_manifest/qrs_run_files.csv'
+            header true
+            sep '\t'
+        }
+    }
+    qrs_read_stats {
+        enabled (params.input_bam ? true : false)
+        path 'qc_alignments/qrs/read_stats'
+        index {
+            path 'qc_alignments/published_files_manifest/qrs_read_stats.csv'
+            header true
+            sep '\t'
+        }
+    }
+    bam_manifest {
+        enabled (params.input_bam ? true : false)
+        path 'qc_alignments'
+    }
+    sample_to_user_map {
+        enabled (params.input_bam ? true : false)
+        path 'qc_alignments'
     }
 
-    //Pre-process: create indexes, get sample ids, make manifest
-    if (params.make_bam_index) {
-        bam_files = SAMTOOLS_INDEX(bam_input_ch)
-    } else {
-        bam_files = bam_input_ch
-            .map { bam_file -> tuple(bam_file, file("${bam_file}.bai", checkIfExists: true)) }
+    //-- VARIANT QC OUTPUTS --
+    charr_stats {
+        enabled (params.input_vcf ? true : false)
+        path 'qc_variants/charr_contamination'
+        index {
+            path 'qc_variants/published_files_manifest/charr_contamination.csv'
+            header true
+            sep '\t'
+        }
     }
-    GET_SAMPLE_ID_BAM(bam_files)
-    GET_BAM_MANIFEST(bam_files)
-
-    if (params.make_vcf_index) {
-        vcf_files = BCFTOOLS_INDEX(vcf_input_ch)
-    } else {
-        vcf_files = vcf_input_ch
-            .map { vcf_file -> tuple(vcf_file, file("${vcf_file}.${params.vcf_index_type}", checkIfExists: true)) }
+    bcftools_stats {
+        enabled (params.input_vcf ? true : false)
+        path 'qc_variants/bcftools_stats'
+        index {
+            path 'qc_variants/published_files_manifest/bcftools_stats.csv'
+            header true
+            sep '\t'
+        }
     }
-    GET_SAMPLE_ID_VCF(vcf_files)
-    GET_VCF_MANIFEST(vcf_files)
-
-    // Get sample IDs from BAM if available otherwise from VCF files
-    if (params.bamfiles || params.bamlist) {
-        manifest_bam = file("${outdir}/bam_manifest.tsv")
-        ext2int_map_ch = GET_BAM_MANIFEST.out
-            .map { "${it.join('\t')}" }
-            .subscribe { manifest_bam.append("$it\n") }
-            //.collectFile(name: "${outdir}/ext2int_map_bam.tsv", newLine: true)
+    bcftools_stats_regions {
+        enabled (params.input_vcf ? true : false)
+        path 'qc_variants/bcftools_stats'
+        index {
+            path 'qc_variants/published_files_manifest/bcftools_stats_regions.csv'
+            header true
+            sep '\t'
+        }
     }
-    if (params.vcffiles || params.vcflist) {
-        manifest_vcf = file("${outdir}/vcf_manifest.tsv")
-        ext2int_map_ch = GET_VCF_MANIFEST.out
-            .map { "${it.join('\t')}" }
-            .subscribe { manifest_vcf.append("$it\n") }
-            //.collectFile(name: "${outdir}/ext2int_map_vcf.tsv", newLine: true)
-    }
-
-    //Perform the QC on BAMs and/or VCFs
-    if (params.bamfiles || params.bamlist) {
-        checkPathParamList = [
-                params.somalier_vars, params.genome, "${params.genome}.fai"
-                ]
-            for (param in checkPathParamList) { if (param) { file(param, checkIfExists: true) } }
-        
-        somalier_varset = file(params.somalier_vars)
-        genome_ref = tuple(file(params.genome), file("${params.genome}.fai"))
-
-        RUN_ALIGNEMENTS_QC(GET_SAMPLE_ID_BAM.out.bam_files, params.regions, somalier_varset, genome_ref) 
-    } 
-
-    if (params.vcffiles || params.vcflist) {
-        annotation_zip_file = file(params.af_annotation_zip, checkIfExists: true)
-        RUN_VARIANTS_QC(GET_SAMPLE_ID_VCF.out.vcf_files, annotation_zip_file)
+    bcftools_idxstats {
+        enabled (params.input_vcf ? true : false)
+        path 'qc_variants/bcftools_idxstats'
+        index {
+            path 'qc_variants/published_files_manifest/bcftools_idxstats.csv'
+            header true
+            sep '\t'
+        }
     }
 }
 
 workflow MAKE_REPORTS {
-    MAKE_REPORTS_WF()
-}
-
-workflow.onComplete { 
-	log.info ( workflow.success ? """\
-    
-    PIPELINE COMPLETED!    
-    ============================================
-    QC folder    --> ${params.outdir}
-    Alignements  --> ${outdir_align}
-    Variants     --> ${outdir_vars}   
-    """.stripIndent() : "Oops .. something went wrong" )
+    // MAKE_REPORTS_WF()
 }
 

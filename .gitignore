@@ -4,3 +4,8 @@ test/
 # Nextflow files
 work/
 .nextflow*
+
+# Coding agents
+.agents
+.aws
+.codex

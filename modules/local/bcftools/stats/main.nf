@@ -8,8 +8,7 @@ process BCFTOOLS_STATS {
         : 'community.wave.seqera.io/library/bcftools_htslib:1.23.1--9f08ec665533d64a'}"
 
     input:
-    tuple val(meta), path(vcf), path(tbi)
-    tuple val(meta2), path(regions)
+    tuple val(meta), path(vcf), path(tbi), path(regions)
     tuple val(meta3), path(targets)
     tuple val(meta4), path(samples)
     tuple val(meta5), path(exons)
@@ -30,6 +29,11 @@ process BCFTOOLS_STATS {
     def samples_file = samples ? "--samples-file ${samples}" : ""
     def reference_fasta = fasta ? "--fasta-ref ${fasta}" : ""
     def exons_file = exons ? "--exons ${exons}" : ""
+    
+    // in case of a gvcf we need to add this
+    /*
+    bcftools view -A --threads 4 -Ou /project/fogs/variants/small_variants/deepvariant/FOGS_860/FOGS_860.g.vcf.gz | bcftools view --threads 4 -Ou -v snps,indels -i 'GT="alt"'
+    */
     """
     bcftools stats \\
         ${args} \\
