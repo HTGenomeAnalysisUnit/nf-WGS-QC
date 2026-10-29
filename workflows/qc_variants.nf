@@ -10,6 +10,7 @@ include { VCF_CONTAMINATION } from "../subworkflows/local/vcf_contamination"
 workflow VARIANTS_QC {
     main:
         annotation_zip_file = file(params.af_annotation_zip, checkIfExists: true)
+        genome_fasta        = file(params.genome_fasta, checkIfExists: true)
 
         // Configure input channels
         input_ch = channel
@@ -53,7 +54,7 @@ workflow VARIANTS_QC {
         // Here we run each component and then add the VCF sample ID to the metadata for downstream analysis
         // This metadata operation is made here to avoid processing waiting for the manifest extraction to complete
         // -- contamination analysis --
-        VCF_CONTAMINATION(processed_vcf_ch, annotation_zip_file)
+        VCF_CONTAMINATION(processed_vcf_ch, annotation_zip_file, genome_fasta)
         vcf_contaimination_out = VCF_CONTAMINATION.out.charr_stats
             .map{meta, charr_stats -> [meta.id, meta, charr_stats]}
             .join(vcf_id_2_user_id)

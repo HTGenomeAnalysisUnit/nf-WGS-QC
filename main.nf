@@ -228,7 +228,7 @@ output {
     }
     bcftools_stats {
         enabled (params.input_vcf ? true : false)
-        path 'qc_variants/bcftools_stats'
+        path 'qc_variants/bcftools/stats'
         index {
             path 'qc_variants/published_files_manifest/bcftools_stats.csv'
             header true
@@ -237,7 +237,7 @@ output {
     }
     bcftools_stats_regions {
         enabled (params.input_vcf ? true : false)
-        path 'qc_variants/bcftools_stats'
+        path 'qc_variants/bcftools/stats'
         index {
             path 'qc_variants/published_files_manifest/bcftools_stats_regions.csv'
             header true
@@ -246,7 +246,7 @@ output {
     }
     bcftools_idxstats {
         enabled (params.input_vcf ? true : false)
-        path 'qc_variants/bcftools_idxstats'
+        path 'qc_variants/bcftools/idxstats'
         index {
             path 'qc_variants/published_files_manifest/bcftools_idxstats.csv'
             header true
