@@ -1,18 +1,34 @@
 include { completionSummary } from "./modules/local/pipeline_utils"
-include { validateParameters; paramsSummaryLog } from 'plugin/nf-schema'
+include { validateParameters; paramsSummaryLog; paramsHelp } from 'plugin/nf-schema'
 include { ALIGNMENTS_QC } from "./workflows/qc_alignments"
 include { VARIANTS_QC } from "./workflows/qc_variants"
 // include { MAKE_REPORTS_WF } from "${projectDir}/workflows/make_reports"
 
 workflow {
     main:
+        // Print help message if requested
+        if (params.help) {
+            log.info paramsHelp()
+            exit 0
+        }
+
+        // Log pipeline parameters
+        log.info paramsSummaryLog(
+            monochrome_logs: params.monochrome_logs
+        )
+        
+        // Validate universal pipeline parameters
+        validateParameters(parameters_schema: 'assets/schema_shared_params.json', monochrome_logs: params.monochrome_logs)
+        
         // -- BAM FILES QC --
-        if (params.input_bam) {        
+        if (params.input_bam) {   
+            validateParameters(parameters_schema: 'assets/schema_alignment_qc_params.json', monochrome_logs: params.monochrome_logs)
             ALIGNMENTS_QC() 
         } 
 
         // -- VCF FILES QC --
         if (params.input_vcf) {
+            validateParameters(parameters_schema: 'assets/schema_variant_qc_params.json', monochrome_logs: params.monochrome_logs)
             VARIANTS_QC()
         }
 

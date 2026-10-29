@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/nf-WGS-QC/assets/alignment_qc_parameters.json",
+  "title": "nf-WGS-QC pipeline parameters for alignment QC",
+  "description": "Whole genome sequencing quality control pipeline.",
+  "type": "object",
+  "$defs": {
+    "alignment_qc_inputs": {
+      "title": "Alignment QC inputs",
+      "type": "object",
+      "description": "Alignment QC input files",
+      "default": "",
+      "properties": {
+        "input_bam": {
+          "type": "string",
+          "format": "file-path",
+          "schema": "assets/schema_input_bam.json",
+          "pattern": "^([\\S\\s]*\\/)?[^\\s\\/]+\\.(tsv|csv)?$",
+          "description": "A samplesheet TSV file describing the alignment files (bam or cram)"
+        },
+        "somalier_vars": {
+          "type": "string",
+          "description": "A VCF file containing variants set to be used with somalier",
+          "pattern": "^([\\S\\s]*\\/)?[^\\s\\/]+\\.vcf(.gz)?$",
+          "format": "file-path"
+        }
+      },
+      "fa_icon": "fas fa-file-import",
+      "required": ["somalier_vars", "input_bam"]
+    },
+    "alignment_qc_configuration": {
+      "title": "Alignment QC configuration",
+      "type": "object",
+      "description": "Configuration for alignment QC processes",
+      "default": "",
+      "properties": {
+        "mosdepth_precision": {
+          "type": "integer",
+          "default": 4,
+          "description": "Precision level when writing mosdepth coverage statistics",
+          "minimum": 1,
+          "maximum": 10
+        },
+        "mosdepth_per_base_coverage": {
+          "type": "boolean",
+          "description": "Compute mosdepth per base coverage. When active this slows down computation significantly"
+        },
+        "mosdepth_thresholds": {
+          "type": "string",
+          "default": "1,10,20,100",
+          "description": "Coverage targets for which to report regions fraction of bases",
+          "pattern": "^([0-9]+,)+[0-9]+$"
+        },
+        "mosdepth_quantize_bins": {
+          "type": "string",
+          "default": "0:1:10:20:300:",
+          "description": "Activate mosdepth quantized outputs and define the coverage bins",
+          "pattern": "^([0-9]+:)+$"
+        },
+        "mosdepth_quantize_labels": {
+          "type": "string",
+          "default": "NO_COVERAGE,LOW_COVERAGE,MID_COVERAGE,GOOD_COVERAGE,EXCESSIVE_COVERAGE",
+          "description": "Define custom labels for the quantized bins. When provided must match the numbers of configured bins"
+        },
+        "qrs_subset_reads": {
+          "type": "integer",
+          "default": 5000000,
+          "description": "Number of reads to subset when computing quick reads stats",
+          "minimum": 10000,
+          "maximum": 10000000
+        }
+      },
+      "fa_icon": "fas fa-wrench",
+      "required": [
+        "mosdepth_precision",
+        "mosdepth_per_base_coverage",
+        "qrs_subset_reads"
+      ]
+    }
+  },
+  "allOf": [
+    {
+      "$ref": "#/$defs/alignment_qc_inputs"
+    },
+    {
+      "$ref": "#/$defs/alignment_qc_configuration"
+    }
+  ]
+}

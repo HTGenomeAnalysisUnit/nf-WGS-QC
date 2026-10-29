@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/nf-WGS-QC/assets/variant_qc_parameters.json",
+  "title": "nf-WGS-QC pipeline variant QC parameters",
+  "description": "Whole genome sequencing quality control pipeline.",
+  "type": "object",
+  "$defs": {
+    "variant_qc_inputs": {
+      "title": "Variant QC inputs",
+      "type": "object",
+      "description": "Variant QC input files",
+      "default": "",
+      "properties": {
+        "input_vcf": {
+          "type": "string",
+          "description": "A samplesheet TSV file describing the variant files (VCF or g.VCF)",
+          "pattern": "^([\\S\\s]*\\/)?[^\\s\\/]+\\.(tsv|csv)$",
+          "format": "file-path",
+          "schema": "assets/schema_input_vcf.json"
+        },
+        "af_annotation_zip": {
+          "type": "string",
+          "description": "An ECTHVAR compatible zip file used to annotate allele frequency for contamination estimates using CHARR",
+          "pattern": "^([\\S\\s]*\\/)?[^\\s\\/]+\\.zip$",
+          "format": "file-path"
+        }
+      },
+      "fa_icon": "fas fa-file-import",
+      "required": ["input_vcf"]
+    },
+    "variant_qc_configuration": {
+      "title": "Variant QC configuration",
+      "type": "object",
+      "description": "Configuration for variant QC processes",
+      "default": "",
+      "properties": {
+        "variant_stats_filter": {
+          "type": "string",
+          "default": ".,PASS",
+          "description": "Filter string to apply when selecting variants for variant stat computation",
+          "hidden": true
+        },
+        "annotate_af": {
+          "type": "boolean",
+          "default": true,
+          "description": "Perform AF annotation using echtvar when estimating variant contamination (needed for single samples or small cohorts)",
+          "hidden": true
+        },
+        "charr_af_field": {
+          "type": "string",
+          "default": "gnomad_af",
+          "description": "The name of the INFO field that contains the AF annotation (used during CHARR estimation)",
+          "hidden": true
+        }
+      },
+      "fa_icon": "fas fa-wrench",
+      "required": ["charr_af_field", "annotate_af", "variant_stats_filter"]
+    }
+  },
+  "allOf": [
+    {
+      "$ref": "#/$defs/variant_qc_inputs"
+    },
+    {
+      "$ref": "#/$defs/variant_qc_configuration"
+    }
+  ]
+}
