@@ -34,13 +34,13 @@
         "genome_fasta": {
           "type": "string",
           "description": "Path to reference genome FASTA file. A fasta index (.fai) must be present in the same location",
-          "pattern": "^([\\\\S\\\\s]*\\\\/)?[^\\\\s\\\\/]+\\\\.fasta$",
+          "pattern": "^([\\S\\s]*\\/)?[^\\s\\/]+\\.fasta$",
           "format": "file-path"
         },
         "regions_bed": {
           "type": "string",
           "description": "Path to a BED file containing regions of interest. Additional stats over these regions will be computed for variants and coverage.",
-          "pattern": "^([\\\\S\\\\s]*\\\\/)?[^\\\\s\\\\/]+\\\\.bed(\\\\.gz)?$",
+          "pattern": "^([\\S\\s]*\\/)?[^\\s\\/]+\\.bed(\\.gz)?$",
           "format": "file-path"
         }
       },
@@ -56,14 +56,14 @@
         "input_vcf": {
           "type": "string",
           "description": "A samplesheet TSV file describing the variant files (vcf or g.vcf)",
-          "pattern": "^([\\\\S\\\\s]*\\\\/)?[^\\\\s\\\\/]+\\\\.(tsv|csv)$",
+          "pattern": "^([\\S\\s]*\\/)?[^\\s\\/]+\\.(tsv|csv)$",
           "format": "file-path",
           "schema": "assets/schema_input_vcf.json"
         },
         "af_annotation_zip": {
           "type": "string",
           "description": "An ECTHVAR compatible zip file used to annotate allele frequency for contamination estimates using CHARR",
-          "pattern": "^([\\\\S\\\\s]*\\\\/)?[^\\\\s\\\\/]+\\\\.zip$",
+          "pattern": "^([\\S\\s]*\\/)?[^\\s\\/]+\\.zip$",
           "format": "file-path"
         }
       },
@@ -108,18 +108,23 @@
           "type": "string",
           "format": "file-path",
           "schema": "assets/schema_input_bam.json",
-          "pattern": "^([\\\\S\\\\s]*\\\\/)?[^\\\\s\\\\/]+\\\\.(tsv|csv)?$",
+          "pattern": "^([\\S\\s]*\\/)?[^\\s\\/]+\\.(tsv|csv)?$",
           "description": "A samplesheet TSV file describing the alignment files (bam or cram)"
         },
         "somalier_vars": {
           "type": "string",
           "description": "A VCF file containing variants set to be used with somalier",
-          "pattern": "^([\\\\S\\\\s]*\\\\/)?[^\\\\s\\\\/]+\\\\.vcf(.gz)?$",
+          "pattern": "^([\\S\\s]*\\/)?[^\\s\\/]+\\.vcf(.gz)?$",
           "format": "file-path"
+        },
+        "verifybamid_svd_file_prefix": {
+          "type": "string",
+          "description": "Prefix for the SVD file set used by VerifyBamID2. Usually like 1000g.phase3.100k.b37.vcf.gz.dat",
+          "pattern": "^([\\S\\s]*\\/)?[^\\s\\/]+\\.dat$"
         }
       },
       "fa_icon": "fas fa-file-import",
-      "required": ["somalier_vars", "input_bam"]
+      "required": ["verifybamid_svd_file_prefix", "somalier_vars", "input_bam"]
     },
     "alignment_qc_configuration": {
       "title": "Alignment QC configuration",
@@ -179,13 +184,13 @@
         "ped_file": {
           "type": "string",
           "description": "A standard PED file describing relationship between samples. If omitted all samples are treated as unrelated",
-          "pattern": "^([\\\\S\\\\s]*\\\\/)?[^\\\\s\\\\/]+\\\\.ped$",
+          "pattern": "^([\\S\\s]*\\/)?[^\\s\\/]+\\.ped$",
           "format": "file-path"
         },
         "somalier_labels": {
           "type": "string",
           "description": "Path to file describing sample labels for the somalier ancestry reference samples",
-          "pattern": "^([\\\\S\\\\s]*\\\\/)?[^\\\\s\\\\/]+\\\\.tsv$",
+          "pattern": "^([\\S\\s]*\\/)?[^\\s\\/]+\\.tsv$",
           "format": "file-path"
         },
         "somalier_1kgdata": {

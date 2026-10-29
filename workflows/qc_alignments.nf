@@ -1,11 +1,12 @@
-include { samplesheetToList     } from 'plugin/nf-schema'
-include { BAM_MANIFEST          } from "../modules/local/bammanifest"
-include { SAMTOOLS_STATS        } from "../modules/nf-core/samtools/stats"
-include { SAMTOOLS_IDXSTATS     } from "../modules/nf-core/samtools/idxstats"
-include { SAMTOOLS_INDEX        } from "../modules/nf-core/samtools/index" 
-include { MOSDEPTH              } from "../modules/nf-core/mosdepth" 
-include { SOMALIER_EXTRACT      } from "../modules/nf-core/somalier/extract" 
-include { QUICK_READS_STATS     } from "../modules/local/qrs" 
+include { samplesheetToList         } from 'plugin/nf-schema'
+include { BAM_MANIFEST              } from "../modules/local/bammanifest"
+include { SAMTOOLS_STATS            } from "../modules/nf-core/samtools/stats"
+include { SAMTOOLS_IDXSTATS         } from "../modules/nf-core/samtools/idxstats"
+include { SAMTOOLS_INDEX            } from "../modules/nf-core/samtools/index" 
+include { MOSDEPTH                  } from "../modules/nf-core/mosdepth" 
+include { SOMALIER_EXTRACT          } from "../modules/nf-core/somalier/extract" 
+include { QUICK_READS_STATS         } from "../modules/local/qrs" 
+include { VERIFYBAMID_VERIFYBAMID2  } from "../modules/nf-core/verifybamid/verifybamid2"
 
 workflow ALIGNMENTS_QC {        
     main:
@@ -15,6 +16,11 @@ workflow ALIGNMENTS_QC {
         // somalier_1kgdata    = file(params.somalier_1kgdata, type: 'dir', checkIfExists: true) //path to a folder containing .somalier files for the 1000G data
         genome_fasta        = file(params.genome_fasta, checkIfExists: true)
         genome_fai          = file("${params.genome_fasta}.fai", checkIfExists: true)
+        svd_files           = [
+            file("${params.verifybamid_svd_file_prefix}.UD", checkIfExists: true), 
+            file("${params.verifybamid_svd_file_prefix}.mu", checkIfExists: true), 
+            file("${params.verifybamid_svd_file_prefix}.bed", checkIfExists: true)
+        ]
 
         // Make mosdepth quantize bins into a list and ensure quantize labels are aligned
         mosdepth_quantize_bins_list = params.mosdepth_quantize_bins.split(':')
@@ -129,6 +135,16 @@ workflow ALIGNMENTS_QC {
 
                 [(name): processed_ch]
             }
+        
+        // -- VERIFYBAMID --
+        VERIFYBAMID_VERIFYBAMID2(bam_files_indexed, svd_files, [], genome_fasta)
+        verifybamid_out = VERIFYBAMID_VERIFYBAMID2.out.self_sm.join(VERIFYBAMID_VERIFYBAMID2.out.log)
+            .map{meta, self_sm, log -> [meta.id, meta, self_sm, log]}
+            .join(bam_id_2_user_id)
+            .map{ _sample_id, meta, self_sm, log, bam_sample_id ->
+                def m = meta + [bam_sample_id: bam_sample_id as String]
+                return [m, self_sm, log]
+            }
 
     emit:
         // coverage outputs
@@ -156,6 +172,9 @@ workflow ALIGNMENTS_QC {
         qrs_per_sample_run = qrs_out.per_sample_run
         qrs_rundetails = qrs_out.rundetails
         qrs_read_stats = qrs_out.read_stats
+
+        // verifybamid outputs
+        verifybamid_result = verifybamid_out
 
         // bam manifest file
         bam_manifest = BAM_MANIFEST.out.bam_manifest

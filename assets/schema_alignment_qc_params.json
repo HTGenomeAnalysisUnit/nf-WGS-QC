@@ -23,10 +23,15 @@
           "description": "A VCF file containing variants set to be used with somalier",
           "pattern": "^([\\S\\s]*\\/)?[^\\s\\/]+\\.vcf(.gz)?$",
           "format": "file-path"
+        },
+        "verifybamid_svd_file_prefix": {
+          "type": "string",
+          "description": "Prefix for the SVD file set used by VerifyBamID2. Usually like 1000g.phase3.100k.b37.vcf.gz.dat",
+          "pattern": "^([\\S\\s]*\\/)?[^\\s\\/]+\\.dat$"
         }
       },
       "fa_icon": "fas fa-file-import",
-      "required": ["somalier_vars", "input_bam"]
+      "required": ["verifybamid_svd_file_prefix", "somalier_vars", "input_bam"]
     },
     "alignment_qc_configuration": {
       "title": "Alignment QC configuration",

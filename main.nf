@@ -120,6 +120,13 @@ workflow {
             : channel.empty()
         ).map{ meta, output_file -> meta + [output_file: output_file] }
 
+        // verifybamid outputs
+        verifybamid_result = (
+            params.input_bam 
+            ? ALIGNMENTS_QC.out.verifybamid_result
+            : channel.empty()
+        ).map{ meta, output_file, log_file -> meta + [output_file: output_file, log_file: log_file] }
+
         // bam manifest file
         bam_manifest = (
             params.input_bam 
@@ -223,6 +230,15 @@ output {
             sep '\t'
         }
     }
+    verifybamid_result {
+        enabled (params.input_bam ? true : false)
+        path 'qc_alignments/verifybamid'
+        index {
+            path 'qc_alignments/published_files_manifest/verifybamid_result.csv'
+            header true
+            sep '\t'
+        }
+    }
     bam_manifest {
         enabled (params.input_bam ? true : false)
         path 'qc_alignments'
@@ -274,4 +290,3 @@ output {
 workflow MAKE_REPORTS {
     // MAKE_REPORTS_WF()
 }
-

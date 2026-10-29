@@ -43,5 +43,9 @@
       }
     },
     "required": ["sample", "variant_file"]
-  }
+  },
+  "allOf": [
+    { "uniqueEntries": ["sample"] },
+    { "uniqueEntries": ["variant_file"] }
+  ]
 }

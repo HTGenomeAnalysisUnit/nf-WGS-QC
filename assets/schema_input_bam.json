@@ -43,5 +43,9 @@
       }
     },
     "required": ["sample", "alignment_file"]
-  }
+  },
+  "allOf": [
+    { "uniqueEntries": ["sample"] },
+    { "uniqueEntries": ["alignment_file"] }
+  ]
 }
