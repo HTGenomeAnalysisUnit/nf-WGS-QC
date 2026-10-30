@@ -212,9 +212,9 @@
       "description": "",
       "default": "",
       "properties": {
-        "make_summary": {
+        "make_reports": {
           "type": "boolean",
-          "description": "Generate a summary report describing all samples PASS/FAIL status"
+          "description": "Generate summary reports describing samples PASS/FAIL status"
         },
         "run_multiqc": {
           "type": "boolean",
@@ -222,7 +222,7 @@
         }
       },
       "fa_icon": "fas fa-wrench",
-      "required": ["make_summary", "run_multiqc"]
+      "required": ["make_reports"]
     },
     "advanced_configuration_parameters": {
       "title": "Advanced configuration parameters",
@@ -324,6 +324,20 @@
     },
     {
       "$ref": "#/$defs/advanced_configuration_parameters"
+    },
+    {
+      "if": {
+        "required": ["make_reports"],
+        "properties": {
+          "make_reports": { "const": true }
+        }
+      },
+      "then": {
+        "properties": {
+          "input_bam": { "const": null },
+          "input_vcf": { "const": null }
+        }
+      }
     }
   ]
 }

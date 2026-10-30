@@ -38,7 +38,7 @@ workflow {
         channel
             .fromList(params.entrySet())
             .map { entry -> "${entry.key}: ${entry.value}" }
-            .collectFile(name: 'params.yml', storeDir: pipeline_inputs_dir, newLine: true)
+            .collectFile(name: "params.${params.trace_report_suffix}.yml", storeDir: pipeline_inputs_dir, newLine: true)
 
         // Store tool versions in a YAML file
         channel.topic('versions')
@@ -50,7 +50,7 @@ workflow {
                 tool_versions.unique().sort()
                 "${process}:\n${tool_versions.join('\n')}"
             }
-            .collectFile(name: 'collated_versions.yml', newLine: true, storeDir: pipeline_inputs_dir)
+            .collectFile(name: "collated_versions.${params.trace_report_suffix}.yml", newLine: true, storeDir: pipeline_inputs_dir)
 
         // Log completion status
         workflow.onComplete {
@@ -133,7 +133,7 @@ workflow {
             ? ALIGNMENTS_QC.out.bam_manifest
             : channel.empty()
         )
-        sample_to_user_map = (
+        sample_to_user_map_bam = (
             params.input_bam 
             ? ALIGNMENTS_QC.out.sample_to_user_map
             : channel.empty()
@@ -160,6 +160,16 @@ workflow {
             ? VARIANTS_QC.out.bcftools_idxstats
             : channel.empty()
         ).map{ meta, output_file -> meta + [output_file: output_file] }
+        vcf_manifest = (
+            params.input_vcf 
+            ? VARIANTS_QC.out.vcf_manifest
+            : channel.empty()
+        )
+        sample_to_user_map_vcf = (
+            params.input_vcf 
+            ? VARIANTS_QC.out.sample_to_user_map
+            : channel.empty()
+        )
 }
 
 output {
@@ -243,7 +253,7 @@ output {
         enabled (params.input_bam ? true : false)
         path 'qc_alignments'
     }
-    sample_to_user_map {
+    sample_to_user_map_bam {
         enabled (params.input_bam ? true : false)
         path 'qc_alignments'
     }
@@ -284,6 +294,14 @@ output {
             header true
             sep '\t'
         }
+    }
+    vcf_manifest {
+        enabled (params.input_vcf ? true : false)
+        path 'qc_variants'
+    }
+    sample_to_user_map_vcf {
+        enabled (params.input_vcf ? true : false)
+        path 'qc_variants'
     }
 }
 
