@@ -2,47 +2,73 @@
 
 import sys
 import pandas as pd
+import argparse
 
-# Read the first command-line argument as the name of the file to read
-project_file = sys.argv[1]
+VERSION = 1.0
 
-# Read the second command-line argument as the name of the file to use for the dictionary
-sid_map_file = sys.argv[2]
+# Handle --version early so it works without required arguments
+version_parser = argparse.ArgumentParser(add_help=False)
+version_parser.add_argument("--version", action="version", version=f"%(prog)s {VERSION}")
+version_parser.parse_known_args()
 
-# Read the project metadata file into a Pandas DataFrame
-project_df = pd.read_csv(project_file, sep='\t')
+# Parse command-line arguments
+parser = argparse.ArgumentParser(description="Create PED file from a manifest file")
+parser.add_argument("manifest_file", help="Path to the project manifest files. This is a tab-separated file containing sample information")
+parser.add_argument("--out", help="Path to the output PED file", required=True)
+parser.add_argument("--sample_id_col", help="Name of the column containing sample IDs in the manifest file", default="bam_sample_id")
+parser.add_argument("--sex_col", help="Name of the column containing sex information in the manifest file", default="sex")
+parser.add_argument("--sex_encode", help="Encoding for sex column.", choices=["01", "12", "MF"], default="12")
+args = parser.parse_args()
 
-# Read the map_table file into a Pandas DataFrame
-sid_map_table_df = pd.read_csv(sid_map_file, sep='\t', names = ['internal_id', 'external_id', 'file_date', 'file_path'])
+manifest_file = args.manifest_file
+sample_id_col = args.sample_id_col
+sex_col = args.sex_col
+sex_encode = args.sex_encode
+output_file = args.out
 
-# Create a dictionary from the map_table DataFrame
-# with keys from the "internal_id" column and values from the "external_id" column
-sid_map = sid_map_table_df.set_index('internal_id')['external_id'].to_dict()
+# Read the manifest file into a DataFrame
+manifest_df = pd.read_csv(manifest_file, sep='\t')
 
-# If any sample from the dictionary is not found in the metadata raise an error
-missing_ids = set(sid_map.keys()) - set(project_df['WGS_id'])
-if len(missing_ids):
-    raise ValueError(f"These sample IDs from project manifest were not found in the WGS_id column in metadata: {missing_ids}")
+# Check sample ID and sex columns exist in the manifest file, otherwise exit with an error
+if sample_id_col not in manifest_df.columns:
+    sys.exit(f"Error: Sample ID column '{sample_id_col}' not found in manifest file")
+if sex_col not in manifest_df.columns:
+    sys.exit(f"Error: Sex column '{sex_col}' not found in manifest file")
 
-# Use the dictionary to convert the values in the "Sample_ID" column of project_df
-# to the new external ids from the dictionary
-# retain only samples present in the dictionary
-project_df = project_df[project_df['WGS_id'].isin(sid_map.keys())]
-project_df['WGS_id'] = project_df['WGS_id'].map(sid_map)
+# Check that sex column contains valid values based on the specified encoding, otherwise exit with an error
+if sex_encode == "01":
+    valid_values = {0, 1, -9}
+elif sex_encode == "12":
+    valid_values = {0, 1, 2, -9}
+elif sex_encode == "MF":
+    valid_values = {"M", "F"}
 
-# Replace all 0 values in the "sex" column with 2
-project_df['Sex'].replace(0, 2, inplace=True)
+invalid_values = set(manifest_df[sex_col].dropna()) - valid_values
+if invalid_values:
+    print(f"Invalid values found in sex column: {invalid_values}")
+    print(f"Valid values for sex column based on encoding '{sex_encode}': {valid_values}")
+    sys.exit(f"Error: Sex column contains invalid values: {invalid_values}")
+
+# Encode sex column based on the specified encoding
+# Somalier wants sex encoded as 1 for male and 2 for female, with 0 for unknown
+if sex_encode == "01":
+    manifest_df[sex_col].replace(0, 2, inplace=True)
+elif sex_encode == "MF":
+    manifest_df[sex_col].replace({"M": 1, "F": 2}, inplace=True)
+
+# This ensures missing values are set to 0 (unknown) as expected by Somalier
+manifest_df[sex_col].replace(-9, 0, inplace=True)
+manifest_df.fillna({sex_col: 0}, inplace=True)
 
 # Create a dummy ped file with sex information
 new_df = pd.DataFrame({
-    'FID': project_df['WGS_id'],
-    'IID': project_df['WGS_id'],
+    'FID': manifest_df[sample_id_col],
+    'IID': manifest_df[sample_id_col],
     'father_id': 0,
     'mother_id': 0,
-    'sex': project_df['Sex'],
+    'sex': manifest_df[sex_col],
     'status': 0
 })
 
-# Save the new DataFrame to a tab-separated file named "ped_file.ped"
-# without header or row names
-new_df.to_csv('ped_file.ped', sep='\t', header=False, index=False)
+# Save to PED file
+new_df.to_csv(output_file, sep='\t', header=False, index=False)

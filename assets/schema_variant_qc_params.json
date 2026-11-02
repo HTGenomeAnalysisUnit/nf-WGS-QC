@@ -63,6 +63,23 @@
     },
     {
       "$ref": "#/$defs/variant_qc_configuration"
+    },
+    {
+      "if": {
+        "required": ["annotate_af"],
+        "properties": {
+          "annotate_af": { "const": true }
+        }
+      },
+      "then": {
+        "required": ["af_annotation_zip"],
+        "properties": {
+          "af_annotation_zip": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
     }
   ]
 }

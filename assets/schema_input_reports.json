@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Input folder list point to qc_alignment / qc_variants folders",
+  "type": "array",
+  "minItems": 1,
+  "items": {
+    "type": "string",
+    "minLength": 1,
+    "format": "directory-path",
+    "exists": true
+  }
+}

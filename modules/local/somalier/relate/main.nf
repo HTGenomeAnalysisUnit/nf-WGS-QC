@@ -1,7 +1,8 @@
 
 process SOMALIER_RELATE {
     tag "$meta.id"
-    label 'process_low'
+    label 'process_single'
+    label 'process_mid_memory'
 
     conda "${moduleDir}/environment.yml"
     container "${ workflow.containerEngine in ['singularity', 'apptainer'] && !task.ext.singularity_pull_docker_container ?
@@ -9,7 +10,7 @@ process SOMALIER_RELATE {
         'quay.io/biocontainers/somalier:0.2.19--h0c29559_0' }"
 
     input:
-    tuple val(meta), path(extract), path(ped)
+    tuple val(meta), path(extract, stageAs: 'somalier_inputs/*'), path(ped)
     path(sample_groups)
 
     output:
@@ -23,7 +24,6 @@ process SOMALIER_RELATE {
 
     script:
     def args = task.ext.args ?: ''
-    def input_list = extract.join(' ')
     def prefix = task.ext.prefix ?: "$meta.id"
     def sample_groups_command = sample_groups ? "-g $sample_groups" : ""
     def ped_command = ped ? "-p $ped" : ""
@@ -31,7 +31,7 @@ process SOMALIER_RELATE {
     """
     somalier relate \\
         -o ${prefix} \\
-        ${input_list} \\
+        'somalier_inputs/*.somalier' \\
         ${args} \\
         ${sample_groups_command} \\
         ${ped_command}

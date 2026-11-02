@@ -1,8 +1,8 @@
-include { completionSummary } from "./modules/local/pipeline_utils"
 include { validateParameters; paramsSummaryLog; paramsHelp } from 'plugin/nf-schema'
-include { ALIGNMENTS_QC } from "./workflows/qc_alignments"
-include { VARIANTS_QC } from "./workflows/qc_variants"
-// include { MAKE_REPORTS_WF } from "${projectDir}/workflows/make_reports"
+include { completionSummary     } from "./modules/local/pipeline_utils"
+include { ALIGNMENTS_QC         } from "./workflows/qc_alignments"
+include { VARIANTS_QC           } from "./workflows/qc_variants"
+include { MAKE_REPORTS          } from "./workflows/make_reports"
 
 workflow {
     main:
@@ -30,6 +30,11 @@ workflow {
         if (params.input_vcf) {
             validateParameters(parameters_schema: 'assets/schema_variant_qc_params.json', monochrome_logs: params.monochrome_logs)
             VARIANTS_QC()
+        }
+
+        if (params.make_reports) {
+            validateParameters(parameters_schema: 'assets/schema_reports_params.json', monochrome_logs: params.monochrome_logs)
+            MAKE_REPORTS()
         }
 
         // -- CLOSING OPERATIONS --
@@ -170,9 +175,33 @@ workflow {
             ? VARIANTS_QC.out.sample_to_user_map
             : channel.empty()
         )
+
+        // -- QC REPORT OUTPUTS --
+        ped_file = (
+            params.make_reports
+            ? MAKE_REPORTS.out.ped_file
+            : channel.empty()
+        )
+
+        somalier_relate_outputs = (
+            params.make_reports
+            ? MAKE_REPORTS.out.somalier_relate_pairs.mix(
+                MAKE_REPORTS.out.somalier_relate_samples,
+                MAKE_REPORTS.out.somalier_relate_html
+            )
+            : channel.empty()
+        )
+        somalier_ancestry_outputs = (
+            params.make_reports
+            ? MAKE_REPORTS.out.somalier_ancestry_tsv.mix(
+                MAKE_REPORTS.out.somalier_ancestry_html
+            )
+            : channel.empty()
+        )
 }
 
 output {
+    // -- ALIGNMENT QC OUTPUTS --
     coverage_main_files {
         enabled (params.input_bam ? true : false)
         path 'qc_alignments/coverage/summary'
@@ -303,8 +332,20 @@ output {
         enabled (params.input_vcf ? true : false)
         path 'qc_variants'
     }
-}
 
-workflow MAKE_REPORTS {
-    // MAKE_REPORTS_WF()
+    // -- QC REPORT OUTPUTS --
+    ped_file {
+        enabled (params.make_reports ? true : false)
+        path 'qc_reports/input_files'
+    }
+
+    somalier_relate_outputs {
+        enabled (params.make_reports ? true : false)
+        path 'qc_reports/somalier/relate'
+    }
+
+    somalier_ancestry_outputs {
+        enabled (params.make_reports ? true : false)
+        path 'qc_reports/somalier/ancestry'
+    }
 }

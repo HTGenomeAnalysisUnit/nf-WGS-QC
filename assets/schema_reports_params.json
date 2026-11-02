@@ -1,0 +1,191 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/nf-WGS-QC/nextflow_schema.json",
+  "title": "nf-WGS-QC pipeline parameters for reports generation",
+  "description": "Whole genome sequencing quality control pipeline.",
+  "type": "object",
+  "$defs": {
+    "output_options": {
+      "title": "Output options",
+      "type": "object",
+      "fa_icon": "fas fa-terminal",
+      "description": "Define where the pipeline should find input data and save output data.",
+      "required": ["outdir"],
+      "properties": {
+        "outdir": {
+          "type": "string",
+          "format": "directory-path",
+          "description": "The output directory where the results will be saved. You have to use absolute paths to storage on Cloud infrastructure.",
+          "fa_icon": "fas fa-folder-open",
+          "default": "QC_results"
+        }
+      }
+    },
+    "reference_files": {
+      "title": "Reference files",
+      "type": "object",
+      "description": "Input reference files shared by all workflows",
+      "default": "",
+      "properties": {
+        "genome_fasta": {
+          "type": "string",
+          "description": "Path to reference genome FASTA file. A fasta index (.fai) must be present in the same location",
+          "pattern": "^([\\S\\s]*\\/)?[^\\s\\/]+\\.fasta$",
+          "format": "file-path",
+          "exists": true
+        }
+      },
+      "fa_icon": "fas fa-file-prescription",
+      "required": ["genome_fasta"]
+    },
+    "report_generation_inputs": {
+      "title": "Report generation inputs",
+      "type": "object",
+      "description": "Input files required for report generation",
+      "default": "",
+      "properties": {
+        "alignment_qc_inputs": {
+          "type": "string",
+          "description": "A file listing alignment QC folders to collect. These are expected to contain outputs from the ALIGNEMENT QC workflow",
+          "pattern": "^([\\S\\s]*\\/)?[^\\s\\/]+\\.(txt|tsv|csv)$",
+          "format": "file-path",
+          "exists": true,
+          "schema": "assets/schema_input_reports.json"
+        },
+        "variant_qc_inputs": {
+          "type": "string",
+          "description": "A file listing variant QC folders to collect. These are expected to contain outputs from the VARIANT QC workflow",
+          "pattern": "^([\\S\\s]*\\/)?[^\\s\\/]+\\.(txt|tsv|csv)$",
+          "format": "file-path",
+          "exists": true,
+          "schema": "assets/schema_input_reports.json"
+        },
+        "project_qc_inputs": {
+          "type": "string",
+          "description": "A file listing project QC folders to collect. Pipeline will collect output from alignment_qc and variant_qc subfolders",
+          "pattern": "^([\\S\\s]*\\/)?[^\\s\\/]+\\.(txt|tsv|csv)$",
+          "format": "file-path",
+          "exists": true,
+          "schema": "assets/schema_input_reports.json"
+        },
+        "alignment_qc_criteria": {
+          "type": "string",
+          "description": "A YML file describing alignment QC FAIL/WARN criteria",
+          "pattern": "^([\\S\\s]*\\/)?[^\\s\\/]+\\.(yml|yaml)$",
+          "format": "file-path",
+          "exists": true
+        },
+        "variant_qc_criteria": {
+          "type": "string",
+          "description": "A YML file describing variant QC FAIL/WARN criteria",
+          "pattern": "^([\\S\\s]*\\/)?[^\\s\\/]+\\.(yml|yaml)$",
+          "format": "file-path",
+          "exists": true
+        },
+        "ped_file": {
+          "type": "string",
+          "description": "A standard PED file describing relationship between samples. If omitted all samples are treated as unrelated",
+          "pattern": "^([\\S\\s]*\\/)?[^\\s\\/]+\\.ped$",
+          "format": "file-path",
+          "exists": true
+        },
+        "somalier_labels": {
+          "type": "string",
+          "description": "Path to file describing sample labels for the somalier ancestry reference samples",
+          "pattern": "^([\\S\\s]*\\/)?[^\\s\\/]+\\.tsv$",
+          "format": "file-path",
+          "exists": true
+        },
+        "somalier_1kgdata": {
+          "type": "string",
+          "description": "Path to a folder containing somalier files for the ancestry reference samples",
+          "format": "directory-path",
+          "exists": true
+        },
+        "fastp_json": {
+          "type": "string",
+          "hidden": true
+        }
+      },
+      "fa_icon": "fas fa-file-contract",
+      "required": ["somalier_labels", "somalier_1kgdata"]
+    },
+    "report_generation_configuration": {
+      "title": "Report generation configuration",
+      "type": "object",
+      "description": "Configure the execution of report generation",
+      "default": "",
+      "properties": {
+        "make_reports": {
+          "type": "boolean",
+          "description": "Run the QC report workflow to generate QC reports summarizing samples PASS/FAIL status"
+        },
+        "run_multiqc": {
+          "type": "boolean",
+          "description": "Generate a MultiQC report"
+        }
+      },
+      "fa_icon": "fas fa-wrench",
+      "required": ["make_reports"]
+    }
+  },
+  "allOf": [
+    {
+      "$ref": "#/$defs/output_options"
+    },
+    {
+      "$ref": "#/$defs/reference_files"
+    },
+    {
+      "$ref": "#/$defs/report_generation_inputs"
+    },
+    {
+      "$ref": "#/$defs/report_generation_configuration"
+    },
+    {
+      "if": {
+        "required": ["make_reports"],
+        "properties": {
+          "make_reports": { "const": true }
+        }
+      },
+      "then": {
+        "properties": {
+          "input_bam": { "const": null },
+          "input_vcf": { "const": null }
+        }
+      }
+    },
+    {
+      "anyOf": [
+        {
+          "required": ["alignment_qc_inputs"],
+          "properties": {
+            "alignment_qc_inputs": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        {
+          "required": ["variant_qc_inputs"],
+          "properties": {
+            "variant_qc_inputs": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        {
+          "required": ["project_qc_inputs"],
+          "properties": {
+            "project_qc_inputs": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

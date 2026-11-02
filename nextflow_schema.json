@@ -35,13 +35,15 @@
           "type": "string",
           "description": "Path to reference genome FASTA file. A fasta index (.fai) must be present in the same location",
           "pattern": "^([\\S\\s]*\\/)?[^\\s\\/]+\\.fasta$",
-          "format": "file-path"
+          "format": "file-path",
+          "exists": true
         },
         "regions_bed": {
           "type": "string",
           "description": "Path to a BED file containing regions of interest. Additional stats over these regions will be computed for variants and coverage.",
           "pattern": "^([\\S\\s]*\\/)?[^\\s\\/]+\\.bed(\\.gz)?$",
-          "format": "file-path"
+          "format": "file-path",
+          "exists": true
         }
       },
       "fa_icon": "fas fa-file-prescription",
@@ -58,13 +60,15 @@
           "description": "A samplesheet TSV file describing the variant files (vcf or g.vcf)",
           "pattern": "^([\\S\\s]*\\/)?[^\\s\\/]+\\.(tsv|csv)$",
           "format": "file-path",
+          "exists": true,
           "schema": "assets/schema_input_vcf.json"
         },
         "af_annotation_zip": {
           "type": "string",
           "description": "An ECTHVAR compatible zip file used to annotate allele frequency for contamination estimates using CHARR",
           "pattern": "^([\\S\\s]*\\/)?[^\\s\\/]+\\.zip$",
-          "format": "file-path"
+          "format": "file-path",
+          "exists": true
         }
       },
       "fa_icon": "fas fa-file-import",
@@ -107,6 +111,7 @@
         "input_bam": {
           "type": "string",
           "format": "file-path",
+          "exists": true,
           "schema": "assets/schema_input_bam.json",
           "pattern": "^([\\S\\s]*\\/)?[^\\s\\/]+\\.(tsv|csv)?$",
           "description": "A samplesheet TSV file describing the alignment files (bam or cram)"
@@ -115,7 +120,8 @@
           "type": "string",
           "description": "A VCF file containing variants set to be used with somalier",
           "pattern": "^([\\S\\s]*\\/)?[^\\s\\/]+\\.vcf(.gz)?$",
-          "format": "file-path"
+          "format": "file-path",
+          "exists": true
         },
         "verifybamid_svd_file_prefix": {
           "type": "string",
@@ -178,25 +184,63 @@
     "report_generation_inputs": {
       "title": "Report generation inputs",
       "type": "object",
-      "description": "",
+      "description": "Input files required for report generation",
       "default": "",
       "properties": {
+        "alignment_qc_inputs": {
+          "type": "string",
+          "description": "A file listing alignment QC folders to collect. These are expected to contain outputs from the ALIGNEMENT QC workflow",
+          "pattern": "^([\\S\\s]*\\/)?[^\\s\\/]+\\.(txt|tsv|csv)$",
+          "format": "file-path",
+          "exists": true
+        },
+        "variant_qc_inputs": {
+          "type": "string",
+          "description": "A file listing variant QC folders to collect. These are expected to contain outputs from the VARIANT QC workflow",
+          "pattern": "^([\\S\\s]*\\/)?[^\\s\\/]+\\.(txt|tsv|csv)$",
+          "format": "file-path",
+          "exists": true
+        },
+        "project_qc_inputs": {
+          "type": "string",
+          "description": "A file listing project QC folders to collect. Pipeline will collect output from alignment_qc and variant_qc subfolders",
+          "pattern": "^([\\S\\s]*\\/)?[^\\s\\/]+\\.(txt|tsv|csv)$",
+          "format": "file-path",
+          "exists": true
+        },
         "ped_file": {
           "type": "string",
           "description": "A standard PED file describing relationship between samples. If omitted all samples are treated as unrelated",
           "pattern": "^([\\S\\s]*\\/)?[^\\s\\/]+\\.ped$",
-          "format": "file-path"
+          "format": "file-path",
+          "exists": true
+        },
+        "alignment_qc_criteria": {
+          "type": "string",
+          "description": "A YML file describing alignment QC FAIL/WARN criteria",
+          "pattern": "^([\\S\\s]*\\/)?[^\\s\\/]+\\.(yml|yaml)$",
+          "format": "file-path",
+          "exists": true
+        },
+        "variant_qc_criteria": {
+          "type": "string",
+          "description": "A YML file describing variant QC FAIL/WARN criteria",
+          "pattern": "^([\\S\\s]*\\/)?[^\\s\\/]+\\.(yml|yaml)$",
+          "format": "file-path",
+          "exists": true
         },
         "somalier_labels": {
           "type": "string",
           "description": "Path to file describing sample labels for the somalier ancestry reference samples",
           "pattern": "^([\\S\\s]*\\/)?[^\\s\\/]+\\.tsv$",
-          "format": "file-path"
+          "format": "file-path",
+          "exists": true
         },
         "somalier_1kgdata": {
           "type": "string",
           "description": "Path to a folder containing somalier files for the ancestry reference samples",
-          "format": "directory-path"
+          "format": "directory-path",
+          "exists": true
         },
         "fastp_json": {
           "type": "string",
@@ -209,12 +253,12 @@
     "report_generation_configuration": {
       "title": "Report generation configuration",
       "type": "object",
-      "description": "",
+      "description": "Configure the execution of report generation",
       "default": "",
       "properties": {
         "make_reports": {
           "type": "boolean",
-          "description": "Generate summary reports describing samples PASS/FAIL status"
+          "description": "Run the QC report workflow to generate QC reports summarizing samples PASS/FAIL status"
         },
         "run_multiqc": {
           "type": "boolean",
@@ -338,6 +382,54 @@
           "input_vcf": { "const": null }
         }
       }
+    },
+    {
+      "if": {
+        "required": ["annotate_af"],
+        "properties": {
+          "annotate_af": { "const": true }
+        }
+      },
+      "then": {
+        "required": ["af_annotation_zip"],
+        "properties": {
+          "af_annotation_zip": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    {
+      "anyOf": [
+        {
+          "required": ["alignment_qc_inputs"],
+          "properties": {
+            "alignment_qc_inputs": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        {
+          "required": ["variant_qc_inputs"],
+          "properties": {
+            "variant_qc_inputs": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        {
+          "required": ["project_qc_inputs"],
+          "properties": {
+            "project_qc_inputs": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      ]
     }
   ]
 }

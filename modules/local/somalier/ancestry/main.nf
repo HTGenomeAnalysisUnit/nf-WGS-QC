@@ -10,7 +10,7 @@ process SOMALIER_ANCESTRY {
 
     input:
     tuple val(meta),  path(query_somalier_files, stageAs: "query_files/*")
-    tuple val(meta2), path(labels_tsv), path(labelled_somalier_files, stageAs: "labelled_files/*")
+    tuple val(meta2), path(labels_tsv), path(labelled_somalier_files, stageAs: "labelled_files")
 
     output:
     tuple val(meta), path("*.somalier-ancestry.tsv") , emit: tsv
@@ -26,8 +26,9 @@ process SOMALIER_ANCESTRY {
     """
     somalier  \\
         ancestry  \\
-        --labels $labels_tsv \$(find -L labelled_files -type f -name "*.somalier")  \\
-        ++ $query_somalier_files  \\
+        --labels $labels_tsv \\
+        'labelled_files/*.somalier'  \\
+        ++ 'query_files/*.somalier'  \\
         --output-prefix=$prefix  \\
         $args
     """
