@@ -20,6 +20,11 @@
             "git_sha": "b574a8bc9e9a536780339f1812b7492340ae36da",
             "installed_by": ["modules"]
           },
+          "datavzrd": {
+            "branch": "master",
+            "git_sha": "7b3452a23773f687ededb4befd037920e5a51341",
+            "installed_by": ["modules"]
+          },
           "echtvar/anno": {
             "branch": "master",
             "git_sha": "3ae65622c8c8e6ab8390a73dd75a698308a4971b",

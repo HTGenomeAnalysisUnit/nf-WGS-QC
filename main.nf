@@ -39,11 +39,11 @@ workflow {
 
         // -- CLOSING OPERATIONS --
         // Store complete input params in a YAML file
-        def pipeline_inputs_dir = "${params.outdir}/pipeline_inputs"
+        def pipeline_info_dir = "${params.outdir}/pipeline_info"
         channel
             .fromList(params.entrySet())
             .map { entry -> "${entry.key}: ${entry.value}" }
-            .collectFile(name: "params.${params.trace_report_suffix}.yml", storeDir: pipeline_inputs_dir, newLine: true)
+            .collectFile(name: "params.${params.trace_report_suffix}.yml", storeDir: pipeline_info_dir, newLine: true)
 
         // Store tool versions in a YAML file
         channel.topic('versions')
@@ -55,7 +55,7 @@ workflow {
                 tool_versions.unique().sort()
                 "${process}:\n${tool_versions.join('\n')}"
             }
-            .collectFile(name: "collated_versions.${params.trace_report_suffix}.yml", newLine: true, storeDir: pipeline_inputs_dir)
+            .collectFile(name: "collated_versions.${params.trace_report_suffix}.yml", newLine: true, storeDir: pipeline_info_dir)
 
         // Log completion status
         workflow.onComplete {

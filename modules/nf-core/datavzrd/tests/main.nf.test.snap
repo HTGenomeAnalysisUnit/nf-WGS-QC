@@ -1,0 +1,231 @@
+{
+    "csv - stub": {
+        "content": [
+            {
+                "0": [
+                    [
+                        {
+                            "id": "csv_config"
+                        },
+                        [
+                            "index.html:md5,d41d8cd98f00b204e9800998ecf8427e",
+                            [
+                                "config.js:md5,d41d8cd98f00b204e9800998ecf8427e",
+                                [
+                                    "data_1.js:md5,d41d8cd98f00b204e9800998ecf8427e"
+                                ],
+                                "functions.js:md5,d41d8cd98f00b204e9800998ecf8427e",
+                                "heatmap.js:md5,d41d8cd98f00b204e9800998ecf8427e",
+                                "index_1.html:md5,d41d8cd98f00b204e9800998ecf8427e",
+                                [
+                                    "plot_0.js:md5,d41d8cd98f00b204e9800998ecf8427e"
+                                ]
+                            ],
+                            [
+                                "bootstrap-select.min.css:md5,d41d8cd98f00b204e9800998ecf8427e",
+                                "bootstrap-table-fixed-columns.min.css:md5,d41d8cd98f00b204e9800998ecf8427e",
+                                "bootstrap-table.min.css:md5,d41d8cd98f00b204e9800998ecf8427e",
+                                "bootstrap.min.css:md5,d41d8cd98f00b204e9800998ecf8427e",
+                                "bundle.js:md5,d41d8cd98f00b204e9800998ecf8427e",
+                                "datavzrd.css:md5,d41d8cd98f00b204e9800998ecf8427e"
+                            ]
+                        ]
+                    ]
+                ],
+                "1": [
+                    [
+                        "DATAVZRD",
+                        "datavzrd",
+                        "2.75.3"
+                    ]
+                ],
+                "report": [
+                    [
+                        {
+                            "id": "csv_config"
+                        },
+                        [
+                            "index.html:md5,d41d8cd98f00b204e9800998ecf8427e",
+                            [
+                                "config.js:md5,d41d8cd98f00b204e9800998ecf8427e",
+                                [
+                                    "data_1.js:md5,d41d8cd98f00b204e9800998ecf8427e"
+                                ],
+                                "functions.js:md5,d41d8cd98f00b204e9800998ecf8427e",
+                                "heatmap.js:md5,d41d8cd98f00b204e9800998ecf8427e",
+                                "index_1.html:md5,d41d8cd98f00b204e9800998ecf8427e",
+                                [
+                                    "plot_0.js:md5,d41d8cd98f00b204e9800998ecf8427e"
+                                ]
+                            ],
+                            [
+                                "bootstrap-select.min.css:md5,d41d8cd98f00b204e9800998ecf8427e",
+                                "bootstrap-table-fixed-columns.min.css:md5,d41d8cd98f00b204e9800998ecf8427e",
+                                "bootstrap-table.min.css:md5,d41d8cd98f00b204e9800998ecf8427e",
+                                "bootstrap.min.css:md5,d41d8cd98f00b204e9800998ecf8427e",
+                                "bundle.js:md5,d41d8cd98f00b204e9800998ecf8427e",
+                                "datavzrd.css:md5,d41d8cd98f00b204e9800998ecf8427e"
+                            ]
+                        ]
+                    ]
+                ],
+                "versions_datavzrd": [
+                    [
+                        "DATAVZRD",
+                        "datavzrd",
+                        "2.75.3"
+                    ]
+                ]
+            }
+        ],
+        "timestamp": "2026-02-09T15:42:32.540265",
+        "meta": {
+            "nf-test": "0.9.3",
+            "nextflow": "25.10.2"
+        }
+    },
+    "tsv": {
+        "content": [
+            {
+                "versions_datavzrd": [
+                    [
+                        "DATAVZRD",
+                        "datavzrd",
+                        "2.75.3"
+                    ]
+                ]
+            },
+            [
+                "index.html",
+                "network/config.js",
+                "network/data/data_1.js",
+                "network/functions.js",
+                "network/index_1.html",
+                "network/plots/plots.js",
+                "static/bundle.js"
+            ]
+        ],
+        "timestamp": "2026-02-09T15:42:27.067191",
+        "meta": {
+            "nf-test": "0.9.3",
+            "nextflow": "25.10.2"
+        }
+    },
+    "no_config_file": {
+        "content": [
+            {
+                "0": [
+                    
+                ],
+                "1": [
+                    
+                ],
+                "report": [
+                    
+                ],
+                "versions_datavzrd": [
+                    
+                ]
+            }
+        ],
+        "timestamp": "2026-02-09T15:42:36.184057",
+        "meta": {
+            "nf-test": "0.9.3",
+            "nextflow": "25.10.2"
+        }
+    },
+    "generic - [ yaml, [ csv, tsv ] ] - report": {
+        "content": [
+            {
+                "report": [
+                    [
+                        {
+                            "id": "multiple_config"
+                        },
+                        [
+                            "index.html",
+                            [
+                                "config.js",
+                                [
+                                    "data_1.js"
+                                ],
+                                "functions.js",
+                                "index_1.html",
+                                [
+                                    "plots.js"
+                                ]
+                            ],
+                            [
+                                "bundle.js"
+                            ],
+                            [
+                                "config.js",
+                                [
+                                    "data_1.js"
+                                ],
+                                "functions.js",
+                                "index_1.html",
+                                [
+                                    "plots.js"
+                                ]
+                            ]
+                        ]
+                    ]
+                ],
+                "versions_datavzrd": [
+                    [
+                        "DATAVZRD",
+                        "datavzrd",
+                        "2.75.3"
+                    ]
+                ]
+            },
+            [
+                "index.html",
+                "network/config.js",
+                "network/data/data_1.js",
+                "network/functions.js",
+                "network/index_1.html",
+                "network/plots/plots.js",
+                "static/bundle.js",
+                "test/config.js",
+                "test/data/data_1.js",
+                "test/functions.js",
+                "test/index_1.html",
+                "test/plots/plots.js"
+            ]
+        ],
+        "timestamp": "2026-10-23T23:20:40.734358",
+        "meta": {
+            "nf-test": "0.9.5",
+            "nextflow": "26.04.0"
+        }
+    },
+    "csv": {
+        "content": [
+            {
+                "versions_datavzrd": [
+                    [
+                        "DATAVZRD",
+                        "datavzrd",
+                        "2.75.3"
+                    ]
+                ]
+            },
+            [
+                "index.html",
+                "static/bundle.js",
+                "test/config.js",
+                "test/data/data_1.js",
+                "test/functions.js",
+                "test/index_1.html",
+                "test/plots/plots.js"
+            ]
+        ],
+        "timestamp": "2026-02-09T15:42:20.848415",
+        "meta": {
+            "nf-test": "0.9.3",
+            "nextflow": "25.10.2"
+        }
+    }
+}

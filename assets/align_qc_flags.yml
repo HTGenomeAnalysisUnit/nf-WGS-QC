@@ -1,0 +1,13 @@
+fail_rules:
+  discordant_sex: "somalier-concordant_sex == 0"
+  low_global_min_10: "mosdepth-dist_global-total-pct_bases_min_depth_10 < 0.85"
+  low_region_min_10: "mosdepth-dist_region-total-pct_bases_min_depth_10 < 0.85"
+  low_baseq: "samtools_stats-average_quality < 35"
+  low_coverage_autosomes: "mosdepth-summary-autosomes-mean_cov < 20"
+  autosome_has_zero_reads: "samtools_idxstats-autosomes-min_mapped_norm == 0"
+  autosome_low_uniformity: "samtools_idxstats-autosomes-lowest_cov_fraction_of_mean < 0.7"
+
+warning_rules:
+  duplicate_samples_detected: "somalier-duplicated_samples != ''"
+  unexpected_related_samples: "somalier-unexpected_related != ''"
+  uncommon_karyotype: "somalier-inferred_karyotype not in ['XY', 'XX']"

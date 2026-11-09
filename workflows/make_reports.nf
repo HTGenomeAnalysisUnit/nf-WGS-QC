@@ -11,6 +11,7 @@ workflow MAKE_REPORTS {
     // var_rules_file = file(params.variant_qc_criteria)
 
     // Collect manifest files across input folders
+    // Alignment QC manifests
     align_manifests_ch = channel
             .fromList(samplesheetToList(params.alignment_qc_inputs, "${projectDir}/assets/schema_input_reports.json"))
             .multiMap{ qc_alignment_dir ->
@@ -28,12 +29,35 @@ workflow MAKE_REPORTS {
             def collected_ch = align_manifests_ch.getProperty(name)
                 .collectFile(
                     name: "${name}_inputs.tsv",
-                    storeDir: "${params.outdir}/qc_reports/input_files",
+                    storeDir: "${params.outdir}/qc_reports/input_files/align_qc",
                     keepHeader: true)
 
             [(name): collected_ch]
         }
 
+    // Variants QC manifests
+    var_manifests_ch = channel
+            .fromList(samplesheetToList(params.variant_qc_inputs, "${projectDir}/assets/schema_input_reports.json"))
+            .multiMap{ qc_variant_dir ->
+                def bcftools_stats_region = file("${qc_variant_dir}/published_files_manifest/bcftools_stats_regions.csv").exists() ? file("${qc_variant_dir}/published_files_manifest/bcftools_stats_regions.csv") : null
+                bcftools_stats_region: bcftools_stats_region
+                bcftools_idxstats: file("${qc_variant_dir}/published_files_manifest/bcftools_idxstats.csv", checkIfExists: true)
+                bcftools_stats: file("${qc_variant_dir}/published_files_manifest/bcftools_stats.csv", checkIfExists: true)
+                charr_contamination: file("${qc_variant_dir}/published_files_manifest/charr_contamination.csv", checkIfExists: true)
+            }
+
+    var_collected_manifests_ch = var_manifests_ch.getNames()
+        .collectEntries { name ->
+            def collected_ch = var_manifests_ch.getProperty(name)
+                .collectFile(
+                    name: "${name}_inputs.tsv",
+                    storeDir: "${params.outdir}/qc_reports/input_files/variant_qc",
+                    keepHeader: true)
+
+            [(name): collected_ch]
+        }
+
+    // -- GENERATE SOMALIER REPORTS --
     // Generate a PED file from sample IDs if one is not provided
     if (params.ped_file) {
         ped_file = file(params.ped_file, checkIfExists: true)
@@ -53,6 +77,8 @@ workflow MAKE_REPORTS {
     somalier_relate_input = somalier_profiles_input.combine(ped_file)
     SOMALIER_RELATE(somalier_relate_input, [])
     SOMALIER_ANCESTRY(somalier_profiles_input, ['ancestry_ref_data', somalier_labels, somalier_1kg_data])
+
+    // -- GENERATE THE PROJECT QC SUMMARY --
 
     /*
     //Make channels per tranche for each data type
