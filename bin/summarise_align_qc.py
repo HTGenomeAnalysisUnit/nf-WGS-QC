@@ -55,7 +55,6 @@ TSV_SELECTED_KEYS = {
             'autosomes-lowest_cov_fraction_of_mean',
             'autosomes-min_mapped_norm',
             'autosomes-min_mapped_norm_chrom',
-            'canonical-mapped',
             'canonical-fraction_mapped',
         ],
         'hidden': [
@@ -478,7 +477,6 @@ def json_values(value):
         return None
     return value
 
-
 def qc_condition_expr(condition, columns):
     """Translate Python conditions to Polars, accepting flattened column names.
 
@@ -519,6 +517,9 @@ def qc_condition_expr(condition, columns):
         ast.GtE: operator.ge, ast.Eq: operator.eq, ast.NotEq: operator.ne,
     }
 
+    def is_missing_marker(node):
+        return isinstance(node, ast.Constant) and node.value in ('', 'NA')
+
     def convert(node):
         if isinstance(node, ast.Name):
             if node.id not in aliases:
@@ -554,6 +555,14 @@ def qc_condition_expr(condition, columns):
                     result = left.is_null()
                     if isinstance(operation, ast.IsNot):
                         result = ~result
+                elif (isinstance(operation, (ast.Eq, ast.NotEq))
+                      and (is_missing_marker(right_node) != is_missing_marker(left_node))):
+                    # col == 'NA' / col == '' (or != ) test for a missing value: null, empty or 'NA'
+                    other = left if is_missing_marker(right_node) else convert(right_node)
+                    text = other.cast(pl.String, strict=False).str.strip_chars()
+                    result = other.is_null() | text.is_in(['', 'NA'])
+                    if isinstance(operation, ast.NotEq):
+                        result = ~result
                 elif type(operation) in comparisons:
                     result = comparisons[type(operation)](left, convert(right_node))
                 else:
@@ -564,7 +573,6 @@ def qc_condition_expr(condition, columns):
         raise ValueError(f'Unsupported QC expression: {type(node).__name__}')
 
     return convert(ast.parse(tokenize.untokenize(rewritten), mode='eval').body)
-
 
 def evaluate_qc_flags(df, qc_flags):
     """Evaluate each rule once; null results do not trigger a flag."""
@@ -614,7 +622,6 @@ def evaluate_qc_flags(df, qc_flags):
         .otherwise(pl.lit('PASS')).alias('QC_status')
     )
     return df.with_columns(flags.get_columns())
-
 
 def main(argv=None):
     # Arguments
@@ -765,10 +772,39 @@ def main(argv=None):
     # Save the dict to a TSV file, retaining only columns defined in accepted_tsv_columns
     accepted_tsv_columns += ['QC_warn_flags', 'QC_fail_flags', 'N_FAIL_conditions', 'N_WARN_conditions', 'QC_status']
     df = df.select([col for col in df.columns if col in accepted_tsv_columns])
-    df.write_csv(f"{args.output_prefix}.tsv", separator='\t')
+    # Place QC_status right after the sample identifiers
+    id_columns = [col for col in ('sample_id', 'bam_sample_id') if col in df.columns]
+    df = df.select(id_columns + ['QC_status'] + [col for col in df.columns if col not in id_columns + ['QC_status']])
+
+    # Polars does not support pandas-style MultiIndex headers, so write the two-row TSV header manually.
+    output_columns = []
+    for col in df.columns:
+        if col in ('sample_id', 'bam_sample_id'):
+            output_columns.append((col, 'sampleid_section'))
+        else:
+            parts = col.split('-', 1)
+            if len(parts) == 2:
+                output_columns.append((parts[1], parts[0]))
+            else:
+                output_columns.append((col, 'qc_section'))
+
+    primary_header, secondary_header = zip(*output_columns)
+    output_path = f"{args.output_prefix}.tsv"
+    with open(output_path, 'w', newline='') as f:
+        f.write('\t'.join(primary_header) + '\n')
+        f.write('\t'.join(secondary_header) + '\n')
+    with open(output_path, 'ab') as f:
+        # Treat empty/whitespace-only strings as missing so they are written as NA like nulls (df itself is left untouched)
+        df_out = df.with_columns(
+            pl.when(pl.col(pl.String).str.strip_chars() == "")
+            .then(None)
+            .otherwise(pl.col(pl.String))
+            .name.keep()
+        )
+        df_out.write_csv(f, separator='\t', include_header=False, null_value='NA', quote_style='never')
     log(f"TSV file saved to {args.output_prefix}.tsv")
 
-    # Save a table reporting for each sample_id, bam_sample_id the 0/1 status for each FAIL and WARN QC flag as well as the final QC status
+    # Save a table reporting for each sample_id, bam_sample_id the 0/1 status for each FAIL and WARN QC flag, the number of warn / fail active flagas and the final QC status
     flag_names_warn = dict.fromkeys(
         flag for severity in ('warning_rules',)
         for flag in (qc_flags.get(severity) or {})
@@ -779,19 +815,155 @@ def main(argv=None):
     )
     qc_flags_status_df = df.select(
         'sample_id', 'bam_sample_id',
+        'QC_status',
+        'N_WARN_conditions',
+        'N_FAIL_conditions',
         *[pl.col('QC_warn_flags').str.split('|').list.contains(flag).cast(pl.UInt8).alias(f"WARN-{flag}")
           for flag in flag_names_warn],
         *[pl.col('QC_fail_flags').str.split('|').list.contains(flag).cast(pl.UInt8).alias(f"FAIL-{flag}")
           for flag in flag_names_fail],
-        'QC_status',
     )
     qc_flags_status_df.write_csv(f"{args.output_prefix}.qc_flags.tsv", separator='\t')
     log(f"QC flags status file saved to {args.output_prefix}.qc_flags.tsv")
 
-    # Save a summary table reporting the overall number of PASS, WARN and FAIL samples
-    summary_df = df['QC_status'].value_counts().sort('QC_status')
-    summary_df.write_csv(f"{args.output_prefix}.qc_summary.tsv", separator='\t')
-    log(f"QC summary file saved to {args.output_prefix}.qc_summary.tsv")
+    # Dump the QC criteria YML as a TSV table with columns for severity, flag name and description
+    qc_criteria_rows = []
+    for severity, flags in qc_flags.items():
+        for flag, description in flags.items():
+            qc_criteria_rows.append({
+                'severity': severity,
+                'flag': flag,
+                'description': description
+            })
+    qc_criteria_df = pl.DataFrame(qc_criteria_rows)
+    qc_criteria_df.write_csv(f"{args.output_prefix}.qc_criteria.tsv", separator='\t')
+    log(f"QC criteria file saved to {args.output_prefix}.qc_criteria.tsv")
+
+    # Export a datavzrd config for the QC metric table. Columns are keyed by the primary header
+    # (first row) and the secondary header (QC section) is rendered as a colored heatmap
+    sections = list(dict.fromkeys(secondary_header))
+    palette = ["#eeeeee", "#c6dbef", "#c7e9c0", "#fdd0a2", "#dadaeb", "#fcbba1", "#d9d9d9", "#bcbddc", "#fde0dd"]
+    section_colors = [palette[i % len(palette)] for i in range(len(sections))]
+
+    datavzrd_columns = {}
+    for col, (primary, _) in zip(df.columns, output_columns):
+        if col == 'sample_id':
+            datavzrd_columns[primary] = {'label': 'Sample ID', 'display-mode': 'pinned'}
+        elif col == 'bam_sample_id':
+            datavzrd_columns[primary] = {'label': 'BAM Sample ID', 'display-mode': 'pinned'}
+        elif col == 'QC_status':
+            datavzrd_columns[primary] = {
+                'label': 'QC status',
+                'display-mode': 'pinned',
+                'plot': {
+                    'heatmap': {
+                        'scale': 'ordinal',
+                        'domain': ['PASS', 'WARN', 'FAIL'],
+                        'range': ['#00a000', '#ffa500', '#ff0000'],
+                        }
+                    }
+                }
+        else:
+            datavzrd_columns.setdefault(primary, {'label': primary, 'precision': 3})
+
+    datavzrd_config = {
+        'name': 'QC metrics report',
+        'datasets': {
+            'qc_metrics': {
+                'path': f"{args.output_prefix}.tsv",
+                'separator': '\t',
+                'headers': 2,
+            }
+        },
+        'views': {
+            'qc_metrics': {
+                'dataset': 'qc_metrics',
+                'desc': 'Alignment QC metrics',
+                'render-table': {
+                    'headers': {
+                        1: {
+                            'label': 'QC section',
+                            'plot': {
+                                'heatmap': {
+                                    'scale': 'ordinal',
+                                    'domain': sections,
+                                    'range': section_colors,
+                                }
+                            },
+                        }
+                    },
+                    'columns': datavzrd_columns,
+                },
+            }
+        },
+    }
+    # Add the QC flags status table: flags with value 1 in red, QC_status colored by outcome
+    flag_columns = [c for c in qc_flags_status_df.columns if c.startswith(('WARN-', 'FAIL-'))]
+    qc_flags_columns = {
+        'sample_id': {'label': 'Sample ID', 'display-mode': 'pinned'},
+        'bam_sample_id': {'label': 'BAM Sample ID', 'display-mode': 'pinned'},
+    }
+    qc_flags_columns['QC_status'] = {
+        'display-mode': 'pinned',
+        'plot': {
+            'heatmap': {
+                'scale': 'ordinal',
+                'domain': ['PASS', 'WARN', 'FAIL'],
+                'range': ['#00a000', '#ffa500', '#ff0000'],
+            }
+        }
+    }
+    qc_flags_columns['N_WARN_conditions'] = {'display-mode': 'pinned'}
+    qc_flags_columns['N_FAIL_conditions'] = {'display-mode': 'pinned'}
+    for c in flag_columns:
+        qc_flags_columns[c] = {
+            'plot': {
+                'heatmap': {
+                    'scale': 'ordinal',
+                    'domain': ['0', '1'],
+                    'range': ['#ffffff', '#ff0000'],
+                }
+            }
+        }
+    datavzrd_config['datasets']['qc_flags'] = {
+        'path': f"{args.output_prefix}.qc_flags.tsv",
+        'separator': '\t',
+    }
+    datavzrd_config['views']['qc_flags'] = {
+        'dataset': 'qc_flags',
+        'desc': 'Alignment QC flags status (1 = flag raised)',
+        'render-table': {'columns': qc_flags_columns},
+    }
+
+    # Add the QC criteria table: severity colored (fail_rules red, warning_rules orange)
+    datavzrd_config['datasets']['qc_criteria'] = {
+        'path': f"{args.output_prefix}.qc_criteria.tsv",
+        'separator': '\t',
+    }
+    datavzrd_config['views']['qc_criteria'] = {
+        'dataset': 'qc_criteria',
+        'desc': 'Alignment QC criteria',
+        'render-table': {
+            'columns': {
+                'severity': {
+                    'label': 'Severity',
+                    'plot': {
+                        'heatmap': {
+                            'scale': 'ordinal',
+                            'domain': ['warning_rules', 'fail_rules'],
+                            'range': ['#ffa500', '#ff0000'],
+                        }
+                    }
+                },
+                'flag': {'label': 'Flag'},
+                'description': {'label': 'Description'},
+            }
+        },
+    }
+
+    with open(f"{args.output_prefix}.qc_align_datavzrd.yml", 'w') as f:
+        yaml.safe_dump(datavzrd_config, f, sort_keys=False)
+    log(f"datavzrd config saved to {args.output_prefix}.qc_align_datavzrd.yml")
 
 if __name__ == '__main__':
     main()
