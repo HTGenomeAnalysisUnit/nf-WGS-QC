@@ -1,5 +1,6 @@
 # Test runs
 test/
+tests/
 
 # Nextflow files
 work/
