@@ -5,6 +5,9 @@ real_data_test/
 work/
 .nextflow*
 
+# logs
+*.log
+
 # Coding agents
 .agents
 .aws
