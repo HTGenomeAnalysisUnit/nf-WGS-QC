@@ -60,13 +60,11 @@
           "exists": true,
           "schema": "assets/schema_input_reports.json"
         },
-        "project_qc_inputs": {
+        "project_qc_folder": {
           "type": "string",
-          "description": "A file listing project QC folders to collect. Pipeline will collect output from alignment_qc and variant_qc subfolders",
-          "pattern": "^([\\S\\s]*\\/)?[^\\s\\/]+\\.(txt|tsv|csv)$",
-          "format": "file-path",
-          "exists": true,
-          "schema": "assets/schema_input_reports.json"
+          "description": "Path to a project QC folder. Pipeline will collect output from alignment_qc and variant_qc subfolders",
+          "format": "directory-path",
+          "exists": true
         },
         "alignment_qc_criteria": {
           "type": "string",
@@ -177,9 +175,9 @@
           }
         },
         {
-          "required": ["project_qc_inputs"],
+          "required": ["project_qc_folder"],
           "properties": {
-            "project_qc_inputs": {
+            "project_qc_folder": {
               "type": "string",
               "minLength": 1
             }

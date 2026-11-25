@@ -10,7 +10,10 @@
       "type": "object",
       "fa_icon": "fas fa-terminal",
       "description": "Define where the pipeline should find input data and save output data.",
-      "required": ["outdir", "project_id"],
+      "required": [
+        "outdir",
+        "project_id"
+      ],
       "properties": {
         "outdir": {
           "type": "string",
@@ -47,7 +50,9 @@
         }
       },
       "fa_icon": "fas fa-file-prescription",
-      "required": ["genome_fasta"]
+      "required": [
+        "genome_fasta"
+      ]
     },
     "variant_qc_inputs": {
       "title": "Variant QC inputs",
@@ -72,7 +77,9 @@
         }
       },
       "fa_icon": "fas fa-file-import",
-      "required": ["input_vcf"]
+      "required": [
+        "input_vcf"
+      ]
     },
     "variant_qc_configuration": {
       "title": "Variant QC configuration",
@@ -100,7 +107,11 @@
         }
       },
       "fa_icon": "fas fa-wrench",
-      "required": ["charr_af_field", "annotate_af", "variant_stats_filter"]
+      "required": [
+        "charr_af_field",
+        "annotate_af",
+        "variant_stats_filter"
+      ]
     },
     "alignment_qc_inputs": {
       "title": "Alignment QC inputs",
@@ -130,7 +141,11 @@
         }
       },
       "fa_icon": "fas fa-file-import",
-      "required": ["verifybamid_svd_file_prefix", "somalier_vars", "input_bam"]
+      "required": [
+        "verifybamid_svd_file_prefix",
+        "somalier_vars",
+        "input_bam"
+      ]
     },
     "alignment_qc_configuration": {
       "title": "Alignment QC configuration",
@@ -201,11 +216,10 @@
           "format": "file-path",
           "exists": true
         },
-        "project_qc_inputs": {
+        "project_qc_folder": {
           "type": "string",
-          "description": "A file listing project QC folders to collect. Pipeline will collect output from alignment_qc and variant_qc subfolders",
-          "pattern": "^([\\S\\s]*\\/)?[^\\s\\/]+\\.(txt|tsv|csv)$",
-          "format": "file-path",
+          "description": "Path to a project QC folder. Pipeline will collect output from alignment_qc and variant_qc subfolders",
+          "format": "directory-path",
           "exists": true
         },
         "ped_file": {
@@ -241,14 +255,13 @@
           "description": "Path to a folder containing somalier files for the ancestry reference samples",
           "format": "directory-path",
           "exists": true
-        },
-        "fastp_json": {
-          "type": "string",
-          "hidden": true
         }
       },
       "fa_icon": "fas fa-file-contract",
-      "required": ["somalier_labels", "somalier_1kgdata"]
+      "required": [
+        "somalier_labels",
+        "somalier_1kgdata"
+      ]
     },
     "report_generation_configuration": {
       "title": "Report generation configuration",
@@ -260,13 +273,35 @@
           "type": "boolean",
           "description": "Run the QC report workflow to generate QC reports summarizing samples PASS/FAIL status"
         },
-        "run_multiqc": {
-          "type": "boolean",
-          "description": "Generate a MultiQC report"
+        "report_target_depths": {
+          "type": "string",
+          "description": "Comma-separated list of target depths for align QC report",
+          "pattern": "^([\\d]+,)+[\\d]+$",
+          "default": "10,20,30"
+        },
+        "report_target_baseq": {
+          "type": "string",
+          "description": "Comma-separated list of target base qualities for align QC report",
+          "pattern": "^([\\d]+,)+[\\d]+$",
+          "default": "30"
+        },
+        "report_var_qual": {
+          "type": "integer",
+          "description": "QUAL threshold for variants QC report",
+          "default": 20
+        },
+        "report_var_dp": {
+          "type": "integer",
+          "description": "Depth threshold (DP) for variants QC report",
+          "default": 10
         }
       },
       "fa_icon": "fas fa-wrench",
-      "required": ["make_reports"]
+      "required": [
+        "make_reports",
+        "report_target_depths",
+        "report_target_baseq"
+      ]
     },
     "advanced_configuration_parameters": {
       "title": "Advanced configuration parameters",
@@ -292,7 +327,13 @@
           "default": "copy",
           "hidden": true,
           "description": "Mode used when publishing files to output folder",
-          "enum": ["copy", "move", "link", "symlink", "rellink"]
+          "enum": [
+            "copy",
+            "move",
+            "link",
+            "symlink",
+            "rellink"
+          ]
         },
         "trace_report_suffix": {
           "type": "string",
@@ -371,27 +412,41 @@
     },
     {
       "if": {
-        "required": ["make_reports"],
+        "required": [
+          "make_reports"
+        ],
         "properties": {
-          "make_reports": { "const": true }
+          "make_reports": {
+            "const": true
+          }
         }
       },
       "then": {
         "properties": {
-          "input_bam": { "const": null },
-          "input_vcf": { "const": null }
+          "input_bam": {
+            "const": null
+          },
+          "input_vcf": {
+            "const": null
+          }
         }
       }
     },
     {
       "if": {
-        "required": ["annotate_af"],
+        "required": [
+          "annotate_af"
+        ],
         "properties": {
-          "annotate_af": { "const": true }
+          "annotate_af": {
+            "const": true
+          }
         }
       },
       "then": {
-        "required": ["af_annotation_zip"],
+        "required": [
+          "af_annotation_zip"
+        ],
         "properties": {
           "af_annotation_zip": {
             "type": "string",
@@ -403,7 +458,9 @@
     {
       "anyOf": [
         {
-          "required": ["alignment_qc_inputs"],
+          "required": [
+            "alignment_qc_inputs"
+          ],
           "properties": {
             "alignment_qc_inputs": {
               "type": "string",
@@ -412,7 +469,9 @@
           }
         },
         {
-          "required": ["variant_qc_inputs"],
+          "required": [
+            "variant_qc_inputs"
+          ],
           "properties": {
             "variant_qc_inputs": {
               "type": "string",
@@ -421,9 +480,11 @@
           }
         },
         {
-          "required": ["project_qc_inputs"],
+          "required": [
+            "project_qc_folder"
+          ],
           "properties": {
-            "project_qc_inputs": {
+            "project_qc_folder": {
               "type": "string",
               "minLength": 1
             }

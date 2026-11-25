@@ -11,3 +11,4 @@ work/
 .aws
 .codex
 .vscode
+__pycache__
