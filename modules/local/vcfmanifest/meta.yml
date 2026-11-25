@@ -1,74 +1,71 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/modules/meta-schema.json
-# # TODO nf-core: Add a description of the module and list keywords
 name: "vcfmanifest"
-description: write your description here
+description: Generate a manifest TSV mapping user sample IDs to single-sample VCF/BCF header sample IDs, file dates, and paths
 keywords:
-  - sort
-  - example
-  - genomics
+  - vcf
+  - bcf
+  - manifest
+  - bcftools
+  - qc
 tools:
-  ## TODO nf-core: Add a description and other details for the software below
-  - "vcfmanifest":
-      description: ""
-      homepage: ""
-      documentation: ""
-      tool_dev_url: ""
-      doi: ""
-      licence: null
-      identifier: null
-
+  - bcftools:
+      description: Utilities for variant calling and manipulating VCFs and BCFs
+      homepage: https://samtools.github.io/bcftools/bcftools.html
+      documentation: https://samtools.github.io/bcftools/bcftools.html
+      tool_dev_url: https://github.com/samtools/bcftools
+      doi: 10.1093/gigascience/giab008
+      licence:
+        - "MIT"
+      identifier: biotools:bcftools
 input:
-  ### TODO nf-core: Add a description of all of the variables used as input
-  - - meta:
-        type: map
-        description: |
-          Groovy Map containing sample information
-          e.g. `[ id:'sample1' ]`
-    - bam:
+  - - sample_ids:
+        type: list
+        description: List of user-provided sample IDs corresponding to the input VCF/BCF files
+    - vcf:
         type: file
-        description: Sorted BAM/CRAM/SAM file
-        pattern: "*.{bam,cram,sam}"
+        description: List of single-sample bgzipped VCF or BCF files
+        pattern: "*.{vcf.gz,bcf}"
         ontologies:
-          - edam: "http://edamontology.org/format_2572" # BAM
-          - edam: "http://edamontology.org/format_2573" # CRAM
-          - edam: "http://edamontology.org/format_3462" # SAM
-
+          - edam: http://edamontology.org/format_3016 # VCF
+    - vcf_index:
+        type: file
+        description: List of index files corresponding to the input VCF/BCF files
+        pattern: "*.{tbi,csi}"
+        ontologies: []
 output:
-  ### TODO nf-core: Add a description of all of the variables used as output
-  bam:
-    - - meta:
-          type: map
-          description: |
-            Groovy Map containing sample information
-            e.g. `[ id:'sample1' ]`
-      - "*.bam":
-          type: file
-          description: Sorted BAM/CRAM/SAM file
-          pattern: "*.{bam,cram,sam}"
-          ontologies:
-            - edam: "http://edamontology.org/format_2572" # BAM
-            - edam: "http://edamontology.org/format_2573" # CRAM
-            - edam: "http://edamontology.org/format_3462" # SAM
+  vcf_manifest:
+    - input_vcf_manifest.tsv:
+        type: file
+        description: TSV manifest containing user_sampleid, vcf_sampleid, file_date, and file_path
+        pattern: "input_vcf_manifest.tsv"
+        ontologies:
+          - edam: http://edamontology.org/format_3475 # TSV
+  sample_to_user_map:
+    - user_to_vcf_sampleid_map.tsv:
+        type: file
+        description: Two-column TSV mapping user_sampleid to vcf_sampleid
+        pattern: "user_to_vcf_sampleid_map.tsv"
+        ontologies:
+          - edam: http://edamontology.org/format_3475 # TSV
   versions_vcfmanifest:
-    - - "${task.process}":
+    - - ${task.process}:
           type: string
           description: The name of the process
-      - "vcfmanifest":
+      - bcftools:
           type: string
           description: The name of the tool
-      - "vcfmanifest --version":
+      - "bcftools --version | sed '1!d; s/^.*bcftools //'":
           type: eval
           description: The expression to obtain the version of the tool
-
 topics:
   versions:
     - - ${task.process}:
           type: string
           description: The name of the process
-      - vcfmanifest:
+      - bcftools:
           type: string
           description: The name of the tool
-      - vcfmanifest --version:
+      - "bcftools --version | sed '1!d; s/^.*bcftools //'":
           type: eval
           description: The expression to obtain the version of the tool
 authors:

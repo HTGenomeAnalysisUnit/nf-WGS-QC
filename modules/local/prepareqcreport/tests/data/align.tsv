@@ -1,0 +1,4 @@
+sample_id	bam_sample_id	QC_status	freemix
+sampleid_section	sampleid_section	qc_section	verifybamid
+S1	B1	PASS	0.001
+S2	B2	FAIL	0.05

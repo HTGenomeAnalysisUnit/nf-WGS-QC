@@ -1,0 +1,5 @@
+fail_rules:
+  low_coverage_autosomes: "mosdepth-summary-autosomes-mean_cov < 20"
+  low_global_min_10: "mosdepth-dist_global-total-pct_bases_min_depth_10 < 0.85"
+warning_rules:
+  high_freemix: "verifybamid-freemix > 0.02"

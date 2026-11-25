@@ -1,0 +1,33 @@
+{
+    "manifest - ped - stub": {
+        "content": [
+            {
+                "0": [
+                    "test_project.ped:md5,d41d8cd98f00b204e9800998ecf8427e"
+                ],
+                "1": [
+                    [
+                        "MAKE_PED",
+                        "make_ped",
+                        "1.0"
+                    ]
+                ],
+                "ped_file": [
+                    "test_project.ped:md5,d41d8cd98f00b204e9800998ecf8427e"
+                ],
+                "versions_makeped": [
+                    [
+                        "MAKE_PED",
+                        "make_ped",
+                        "1.0"
+                    ]
+                ]
+            }
+        ],
+        "timestamp": "2026-11-25T10:24:30.246545077",
+        "meta": {
+            "nf-test": "0.9.5",
+            "nextflow": "26.04.6"
+        }
+    }
+}

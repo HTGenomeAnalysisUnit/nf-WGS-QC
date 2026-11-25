@@ -1,74 +1,117 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/modules/meta-schema.json
-# # TODO nf-core: Add a description of the module and list keywords
-name: "summarisealignqc"
-description: write your description here
+name: "summarisevarqc"
+description: Aggregate variant QC metrics across samples into JSON, summary TSV, QC flag tables, and a datavzrd YAML config
 keywords:
-  - sort
-  - example
-  - genomics
+  - variant qc
+  - summary
+  - datavzrd
+  - bcftools
+  - charr
 tools:
-  ## TODO nf-core: Add a description and other details for the software below
-  - "summarisealignqc":
-      description: ""
-      homepage: ""
-      documentation: ""
-      tool_dev_url: ""
+  - summarise_var_qc:
+      description: Python script aggregating variant QC manifests (bcftools idxstats, bcftools stats, CHARR), evaluating user-defined QC rules, and generating datavzrd configs
+      homepage: https://github.com/HTGenomeAnalysisUnit/nf-WGS-QC
+      documentation: https://github.com/HTGenomeAnalysisUnit/nf-WGS-QC
+      tool_dev_url: https://github.com/HTGenomeAnalysisUnit/nf-WGS-QC
       doi: ""
-      licence: null
-      identifier: null
-
+      licence:
+        - "MIT"
+      identifier: ""
 input:
-  ### TODO nf-core: Add a description of all of the variables used as input
-  - - meta:
-        type: map
-        description: |
-          Groovy Map containing sample information
-          e.g. `[ id:'sample1' ]`
-    - bam:
-        type: file
-        description: Sorted BAM/CRAM/SAM file
-        pattern: "*.{bam,cram,sam}"
-        ontologies:
-          - edam: "http://edamontology.org/format_2572" # BAM
-          - edam: "http://edamontology.org/format_2573" # CRAM
-          - edam: "http://edamontology.org/format_3462" # SAM
-
+  - project_id:
+      type: string
+      description: Project identifier used as prefix for output files
+  - report_var_qual:
+      type: number
+      description: QUAL threshold for reported SNP/indel counts and fractions in the summary TSV
+  - report_var_dp:
+      type: number
+      description: DP threshold for reported genotype counts and fractions in the summary TSV
+  - qc_flags:
+      type: file
+      description: YAML file specifying fail_rules and warning_rules for variant QC
+      pattern: "*.{yml,yaml}"
+      ontologies:
+        - edam: http://edamontology.org/format_3750 # YAML
+  - bcftools_stats_region:
+      type: file
+      description: Optional manifest TSV listing per-sample bcftools stats output files computed on target regions
+      pattern: "*.tsv"
+      ontologies:
+        - edam: http://edamontology.org/format_3475 # TSV
+  - bcftools_idxstats:
+      type: file
+      description: Manifest TSV listing per-sample bcftools index --stats output files
+      pattern: "*.tsv"
+      ontologies:
+        - edam: http://edamontology.org/format_3475 # TSV
+  - bcftools_stats:
+      type: file
+      description: Manifest TSV listing per-sample bcftools stats output files
+      pattern: "*.tsv"
+      ontologies:
+        - edam: http://edamontology.org/format_3475 # TSV
+  - charr_contamination:
+      type: file
+      description: Manifest TSV listing per-sample CHARR (sceVCF) contamination TSV files
+      pattern: "*.tsv"
+      ontologies:
+        - edam: http://edamontology.org/format_3475 # TSV
 output:
-  ### TODO nf-core: Add a description of all of the variables used as output
-  bam:
-    - - meta:
-          type: map
-          description: |
-            Groovy Map containing sample information
-            e.g. `[ id:'sample1' ]`
-      - "*.bam":
-          type: file
-          description: Sorted BAM/CRAM/SAM file
-          pattern: "*.{bam,cram,sam}"
-          ontologies:
-            - edam: "http://edamontology.org/format_2572" # BAM
-            - edam: "http://edamontology.org/format_2573" # CRAM
-            - edam: "http://edamontology.org/format_3462" # SAM
-  versions_summarisealignqc:
-    - - "${task.process}":
+  qc_report_tsv:
+    - "*-var_qc.tsv":
+        type: file
+        description: Two-header summary TSV table of variant QC metrics and status per sample
+        pattern: "*-var_qc.tsv"
+        ontologies:
+          - edam: http://edamontology.org/format_3475 # TSV
+  qc_report_json:
+    - "*-var_qc.json":
+        type: file
+        description: Detailed nested JSON report of all variant QC metrics per sample
+        pattern: "*-var_qc.json"
+        ontologies:
+          - edam: http://edamontology.org/format_3464 # JSON
+  qc_flags:
+    - "*-var_qc.qc_flags.tsv":
+        type: file
+        description: Binary QC flag indicator matrix and overall QC_status per sample
+        pattern: "*-var_qc.qc_flags.tsv"
+        ontologies:
+          - edam: http://edamontology.org/format_3475 # TSV
+  qc_criteria:
+    - "*-var_qc.qc_criteria.tsv":
+        type: file
+        description: Table describing configured variant QC fail and warning rules
+        pattern: "*-var_qc.qc_criteria.tsv"
+        ontologies:
+          - edam: http://edamontology.org/format_3475 # TSV
+  datavzrd_yml:
+    - "*-var_qc.qc_var_datavzrd.yml":
+        type: file
+        description: Datavzrd YAML configuration for variant QC tables
+        pattern: "*-var_qc.qc_var_datavzrd.yml"
+        ontologies:
+          - edam: http://edamontology.org/format_3750 # YAML
+  versions_summarisevarqc:
+    - - ${task.process}:
           type: string
           description: The name of the process
-      - "summarisealignqc":
+      - summarise_var_qc:
           type: string
           description: The name of the tool
-      - "summarisealignqc --version":
+      - "summarise_var_qc.py --version":
           type: eval
           description: The expression to obtain the version of the tool
-
 topics:
   versions:
     - - ${task.process}:
           type: string
           description: The name of the process
-      - summarisealignqc:
+      - summarise_var_qc:
           type: string
           description: The name of the tool
-      - summarisealignqc --version:
+      - "summarise_var_qc.py --version":
           type: eval
           description: The expression to obtain the version of the tool
 authors:

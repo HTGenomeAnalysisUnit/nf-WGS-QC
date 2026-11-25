@@ -1,6 +1,5 @@
 # Test runs
-test/
-tests/
+real_data_test/
 
 # Nextflow files
 work/

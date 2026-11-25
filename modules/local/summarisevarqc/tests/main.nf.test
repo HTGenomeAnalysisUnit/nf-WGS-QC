@@ -1,0 +1,88 @@
+nextflow_process {
+
+    name "Test Process SUMMARISE_VARIANT_QC"
+    script "../main.nf"
+    process "SUMMARISE_VARIANT_QC"
+
+    tag "modules"
+    tag "modules_local"
+    tag "summarisevarqc"
+
+    test("dummy_cohort - var_qc") {
+
+        when {
+            process {
+                """
+                def dataDir = file("${projectDir}/modules/local/summarisevarqc/tests/data")
+                def idxstatsManifest = file("${outputDir}/bcftools_idxstats_inputs.tsv")
+                idxstatsManifest.text = "id\\tvcf_sample_id\\toutput_file\\n" +
+                    "sample1\\tS1\\t\${dataDir}/S1.bcftools_idxstats.txt\\n"
+
+                def statsManifest = file("${outputDir}/bcftools_stats_inputs.tsv")
+                statsManifest.text = "id\\tvcf_sample_id\\toutput_file\\n" +
+                    "sample1\\tS1\\t\${dataDir}/S1.bcftools_stats.txt\\n"
+
+                def statsRegionManifest = file("${outputDir}/bcftools_stats_region_inputs.tsv")
+                statsRegionManifest.text = "id\\tvcf_sample_id\\toutput_file\\n" +
+                    "sample1\\tS1\\t\${dataDir}/S1.regions.bcftools_stats.txt\\n"
+
+                def charrManifest = file("${outputDir}/charr_inputs.tsv")
+                charrManifest.text = "id\\tvcf_sample_id\\toutput_file\\n" +
+                    "sample1\\tS1\\t\${dataDir}/S1.charr.tsv\\n"
+
+                input[0] = 'test_project'
+                input[1] = 20
+                input[2] = 10
+                input[3] = file("${projectDir}/modules/local/summarisevarqc/tests/data/var_qc_flags.yml", checkIfExists: true)
+                input[4] = statsRegionManifest
+                input[5] = idxstatsManifest
+                input[6] = statsManifest
+                input[7] = charrManifest
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert process.success },
+                { assert path(process.out.qc_report_tsv.get(0)).readLines().size() == 3 },
+                { assert path(process.out.qc_report_json.get(0)).text.contains('"sample1"') },
+                { assert path(process.out.qc_flags.get(0)).readLines()[1].contains('\tPASS\t') },
+                { assert path(process.out.qc_criteria.get(0)).readLines().size() == 4 },
+                { assert path(process.out.datavzrd_yml.get(0)).text.contains('var_qc_metrics') },
+                { assert process.out.versions_summarisevarqc.size() == 1 }
+            )
+        }
+    }
+
+    test("dummy_cohort - var_qc - stub") {
+
+        options "-stub"
+
+        when {
+            process {
+                """
+                input[0] = 'test_project'
+                input[1] = 20
+                input[2] = 10
+                input[3] = file("${projectDir}/modules/local/summarisevarqc/tests/data/var_qc_flags.yml", checkIfExists: true)
+                input[4] = file("${projectDir}/modules/local/summarisevarqc/tests/data/S1.regions.bcftools_stats.txt", checkIfExists: true)
+                input[5] = file("${projectDir}/modules/local/summarisevarqc/tests/data/S1.bcftools_idxstats.txt", checkIfExists: true)
+                input[6] = file("${projectDir}/modules/local/summarisevarqc/tests/data/S1.bcftools_stats.txt", checkIfExists: true)
+                input[7] = file("${projectDir}/modules/local/summarisevarqc/tests/data/S1.charr.tsv", checkIfExists: true)
+                """
+            }
+        }
+
+        then {
+            assertAll(
+                { assert process.success },
+                { assert path(process.out.qc_report_tsv.get(0)).exists() },
+                { assert path(process.out.qc_report_json.get(0)).exists() },
+                { assert path(process.out.qc_flags.get(0)).exists() },
+                { assert path(process.out.qc_criteria.get(0)).exists() },
+                { assert path(process.out.datavzrd_yml.get(0)).exists() }
+            )
+        }
+    }
+}

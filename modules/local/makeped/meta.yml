@@ -1,49 +1,47 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/modules/meta-schema.json
-# # TODO nf-core: Add a description of the module and list keywords
 name: "makeped"
-description: write your description here
+description: Generate a Somalier-compatible PED pedigree file from a sample manifest TSV
 keywords:
-  - sort
-  - example
-  - genomics
+  - ped
+  - pedigree
+  - somalier
+  - manifest
+  - qc
 tools:
-  ## TODO nf-core: Add a description and other details for the software below
-  - "makeped":
-      description: ""
-      homepage: ""
-      documentation: ""
-      tool_dev_url: ""
+  - make_ped:
+      description: Python script generating a standard 6-column PED file from a sample manifest TSV
+      homepage: https://github.com/HTGenomeAnalysisUnit/nf-WGS-QC
+      documentation: https://github.com/HTGenomeAnalysisUnit/nf-WGS-QC
+      tool_dev_url: https://github.com/HTGenomeAnalysisUnit/nf-WGS-QC
       doi: ""
-      licence: null
-      identifier: null
-
+      licence:
+        - "MIT"
+      identifier: ""
 input:
-  - bam:
+  - manifest:
       type: file
-      description: Sorted BAM/CRAM/SAM file
-      pattern: "*.{bam,cram,sam}"
+      description: Tab-separated manifest file containing sample ID and sex columns
+      pattern: "*.{tsv,csv}"
       ontologies:
-        - edam: http://edamontology.org/format_2572 # BAM
-        - edam: http://edamontology.org/format_2573 # CRAM
-        - edam: http://edamontology.org/format_3462 # SAM
+        - edam: http://edamontology.org/format_3475 # TSV
+  - project_id:
+      type: string
+      description: Project identifier used as prefix for the generated PED file
 output:
-  bam:
-    - "*.bam":
+  ped_file:
+    - "*.ped":
         type: file
-        description: Sorted BAM/CRAM/SAM file
-        pattern: "*.{bam,cram,sam}"
-        ontologies:
-          - edam: http://edamontology.org/format_2572 # BAM
-          - edam: http://edamontology.org/format_2573 # CRAM
-          - edam: http://edamontology.org/format_3462 # SAM
+        description: Standard 6-column PED pedigree file formatted for Somalier
+        pattern: "*.ped"
+        ontologies: []
   versions_makeped:
     - - ${task.process}:
           type: string
           description: The name of the process
-      - makeped:
+      - make_ped:
           type: string
           description: The name of the tool
-      - makeped --version:
+      - "make_ped.py --version | cut -d' ' -f2":
           type: eval
           description: The expression to obtain the version of the tool
 topics:
@@ -51,10 +49,10 @@ topics:
     - - ${task.process}:
           type: string
           description: The name of the process
-      - makeped:
+      - make_ped:
           type: string
           description: The name of the tool
-      - makeped --version:
+      - "make_ped.py --version | cut -d' ' -f2":
           type: eval
           description: The expression to obtain the version of the tool
 authors:

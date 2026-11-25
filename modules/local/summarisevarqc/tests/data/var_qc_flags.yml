@@ -1,0 +1,5 @@
+fail_rules:
+  autosome_has_zero_vars: "bcftools_idxstats-autosomes-min_n_vars == 0"
+  contaminated: "charr-charr > 0.04 or charr-inconsistent_ab_het_rate > 0.15"
+warning_rules:
+  var_low_coverage: "bcftools_stats-dp-fraction_genotypes_gt_10 < 0.7"

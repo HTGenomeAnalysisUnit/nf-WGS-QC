@@ -1,0 +1,31 @@
+name: QC metrics report
+datasets:
+  var_qc_metrics:
+    path: var.tsv
+    separator: "\t"
+    headers: 2
+  var_qc_flags:
+    path: var.qc_flags.tsv
+    separator: "\t"
+  var_qc_criteria:
+    path: var.qc_criteria.tsv
+    separator: "\t"
+views:
+  var_qc_metrics:
+    dataset: var_qc_metrics
+    desc: Variant QC metrics
+    render-table:
+      columns:
+        sample_id:
+          label: Sample ID
+          display-mode: pinned
+  var_qc_flags:
+    dataset: var_qc_flags
+    desc: Variant QC flags
+    render-table:
+      columns: {}
+  var_qc_criteria:
+    dataset: var_qc_criteria
+    desc: Variant QC criteria
+    render-table:
+      columns: {}

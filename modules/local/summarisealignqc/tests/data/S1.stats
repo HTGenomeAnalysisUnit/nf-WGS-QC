@@ -1,0 +1,12 @@
+SN	sequences:	1000
+SN	reads duplicated:	100
+SN	reads mapped:	950
+SN	reads properly paired:	900
+SN	reads MQ0:	10
+SN	average quality:	36.0
+SN	average length:	150.0
+SN	total length:	150000
+SN	error rate:	0.001
+FFQ	1	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	100
+LFQ	1	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	100
+IS	0	0

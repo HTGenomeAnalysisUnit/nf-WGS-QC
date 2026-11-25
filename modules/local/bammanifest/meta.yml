@@ -1,61 +1,61 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/modules/meta-schema.json
-# # TODO nf-core: Add a description of the module and list keywords
 name: "bammanifest"
-description: write your description here
+description: Generate a manifest TSV mapping user sample IDs to BAM/CRAM header sample IDs, file dates, and paths
 keywords:
-  - sort
-  - example
-  - genomics
+  - bam
+  - cram
+  - manifest
+  - samtools
+  - qc
 tools:
-  ## TODO nf-core: Add a description and other details for the software below
-  - "bammanifest":
-      description: "Tools for dealing with SAM, BAM and CRAM files"
-      homepage: "None"
-      documentation: "None"
-      tool_dev_url: "None"
-      doi: ""
-      licence: ["MIT"]
+  - samtools:
+      description: Tools for dealing with SAM, BAM and CRAM files
+      homepage: https://www.htslib.org/
+      documentation: https://www.htslib.org/doc/samtools.html
+      tool_dev_url: https://github.com/samtools/samtools
+      doi: 10.1093/gigascience/giab008
+      licence:
+        - "MIT"
       identifier: biotools:samtools
-
 input:
-  # TODO nf-core: Update the information obtained from bio.tools and make sure that it is correct
-  - - meta:
-        type: map
-        description: Groovy Map containing sample information. e.g. `[
-          id:'sample1' ]`
-    - sequence_trace:
+  - - sample_ids:
+        type: list
+        description: List of user-provided sample IDs corresponding to the input BAM/CRAM files
+    - bam:
         type: file
-        description: sequence_trace file
-        pattern: "*.{bam,sam,cram}"
+        description: List of input BAM or CRAM alignment files
+        pattern: "*.{bam,cram}"
         ontologies:
-          - edam: http://edamontology.org/data_0924 # Sequence trace
           - edam: http://edamontology.org/format_2572 # BAM
-          - edam: http://edamontology.org/format_2573 # SAM
           - edam: http://edamontology.org/format_3462 # CRAM
+    - bai:
+        type: file
+        description: List of index files corresponding to the input BAM or CRAM files
+        pattern: "*.{bai,crai}"
+        ontologies: []
 output:
-  # TODO nf-core: Update the information obtained from bio.tools and make sure that it is correct
-  sequence_trace:
-    - - meta:
-          type: map
-          description: Groovy Map containing sample information. e.g. `[
-            id:'sample1' ]`
-      - "*.{bam,sam,cram}":
-          type: file
-          description: sequence_trace file
-          pattern: "*.{bam,sam,cram}"
-          ontologies:
-            - edam: http://edamontology.org/data_0924 # Sequence trace
-            - edam: http://edamontology.org/format_2572 # BAM
-            - edam: http://edamontology.org/format_2573 # SAM
-            - edam: http://edamontology.org/format_3462 # CRAM
+  bam_manifest:
+    - input_bam_manifest.tsv:
+        type: file
+        description: TSV manifest containing user_sampleid, bam_sampleid, file_date, and file_path
+        pattern: "input_bam_manifest.tsv"
+        ontologies:
+          - edam: http://edamontology.org/format_3475 # TSV
+  sample_to_user_map:
+    - user_to_bam_sampleid_map.tsv:
+        type: file
+        description: Two-column TSV mapping user_sampleid to bam_sampleid
+        pattern: "user_to_bam_sampleid_map.tsv"
+        ontologies:
+          - edam: http://edamontology.org/format_3475 # TSV
   versions_bammanifest:
     - - ${task.process}:
           type: string
           description: The name of the process
-      - bammanifest:
+      - samtools:
           type: string
           description: The name of the tool
-      - bammanifest --version:
+      - "samtools version | sed '1!d;s/.* //'":
           type: eval
           description: The expression to obtain the version of the tool
 topics:
@@ -63,10 +63,10 @@ topics:
     - - ${task.process}:
           type: string
           description: The name of the process
-      - bammanifest:
+      - samtools:
           type: string
           description: The name of the tool
-      - bammanifest --version:
+      - "samtools version | sed '1!d;s/.* //'":
           type: eval
           description: The expression to obtain the version of the tool
 authors:

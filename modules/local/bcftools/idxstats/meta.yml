@@ -1,57 +1,48 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/modules/meta-schema.json
-# # TODO nf-core: Add a description of the module and list keywords
 name: "bcftools_idxstats"
-description: write your description here
+description: Compute per-chromosome variant counts from an indexed VCF/BCF file using bcftools index --stats
 keywords:
-  - sort
-  - example
-  - genomics
+  - bcftools
+  - idxstats
+  - vcf
+  - bcf
+  - variant qc
 tools:
-  ## TODO nf-core: Add a description and other details for the software below
-  - "bcftools":
-      description:
-        "BCFtools is a set of utilities that manipulate variant calls in
-        the Variant Call Format (VCF) and its binary counterpart BCF. All commands work
-        transparently with both VCFs and BCFs, both uncompressed and BGZF-compressed.\
-        \  Most commands accept VCF, bgzipped VCF and BCF with filetype detected automatically
-        even when streaming from a pipe. Indexed VCF and BCF will work in all situations.
-        Un-indexed VCF and BCF and streams will work in most, but not all situations."
-      homepage: "None"
-      documentation: "None"
-      tool_dev_url: "None"
-      doi: ""
-      licence: ["GPL", "GPL v3-or-later"]
+  - bcftools:
+      description: Utilities for variant calling and manipulating VCFs and BCFs
+      homepage: https://samtools.github.io/bcftools/bcftools.html
+      documentation: https://samtools.github.io/bcftools/bcftools.html
+      tool_dev_url: https://github.com/samtools/bcftools
+      doi: 10.1093/gigascience/giab008
+      licence:
+        - "MIT"
       identifier: biotools:bcftools
-
 input:
-  # TODO nf-core: Update the information obtained from bio.tools and make sure that it is correct
   - - meta:
         type: map
-        description: Groovy Map containing sample information. e.g. `[
-          id:'sample1' ]`
-    - sequence_variations:
+        description: Groovy Map containing sample information, e.g. `[ id:'sample1' ]`
+    - vcf:
         type: file
-        description: sequence_variations file
-        pattern: "*.{vcf,bcf}"
+        description: Bgzipped VCF or BCF input file
+        pattern: "*.{vcf.gz,bcf}"
         ontologies:
-          - edam: http://edamontology.org/data_3498 # Sequence variations
           - edam: http://edamontology.org/format_3016 # VCF
-          - edam: http://edamontology.org/format_3020 # BCF
+    - tbi:
+        type: file
+        description: Index file (TBI or CSI) for the input VCF/BCF file
+        pattern: "*.{tbi,csi}"
+        ontologies: []
 output:
-  # TODO nf-core: Update the information obtained from bio.tools and make sure that it is correct
-  sequence_variations:
+  idxstats:
     - - meta:
           type: map
-          description: Groovy Map containing sample information. e.g. `[
-            id:'sample1' ]`
-      - "*.{vcf,bcf}":
+          description: Groovy Map containing sample information, e.g. `[ id:'sample1' ]`
+      - "*stats.txt":
           type: file
-          description: sequence_variations file
-          pattern: "*.{vcf,bcf}"
+          description: Tab-separated file with contig name, contig length, and number of variant records
+          pattern: "*.bcftools_idxstats.txt"
           ontologies:
-            - edam: http://edamontology.org/data_3498 # Sequence variations
-            - edam: http://edamontology.org/format_3016 # VCF
-            - edam: http://edamontology.org/format_3020 # BCF
+            - edam: http://edamontology.org/format_3475 # TSV
   versions_bcftools:
     - - ${task.process}:
           type: string
@@ -59,7 +50,7 @@ output:
       - bcftools:
           type: string
           description: The name of the tool
-      - bcftools --version:
+      - "bcftools --version | sed '1!d; s/^.*bcftools //'":
           type: eval
           description: The expression to obtain the version of the tool
 topics:
@@ -70,7 +61,7 @@ topics:
       - bcftools:
           type: string
           description: The name of the tool
-      - bcftools --version:
+      - "bcftools --version | sed '1!d; s/^.*bcftools //'":
           type: eval
           description: The expression to obtain the version of the tool
 authors:

@@ -1,0 +1,20 @@
+# bcftools stats
+ID	0	S1.bcf
+SN	0	number of samples:	1
+SN	0	number of records:	670
+SN	0	number of no-ALTs:	0
+SN	0	number of SNPs:	500
+SN	0	number of MNPs:	0
+SN	0	number of indels:	170
+SN	0	number of others:	0
+SN	0	number of multiallelic sites:	12
+SN	0	number of multiallelic SNP sites:	3
+TSTV	0	340	160	2.13	338	160	2.11
+QUAL	0	10.0	50	30	20	20
+QUAL	0	25.0	450	310	140	150
+ST	0	A>G	170
+ST	0	C>T	170
+ST	0	A>C	80
+ST	0	G>T	80
+DP	0	5	70	10.45	0	0.0
+DP	0	20	600	89.55	0	0.0

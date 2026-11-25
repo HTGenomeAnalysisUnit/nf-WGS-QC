@@ -1,0 +1,31 @@
+name: QC metrics report
+datasets:
+  qc_metrics:
+    path: align.tsv
+    separator: "\t"
+    headers: 2
+  qc_flags:
+    path: align.qc_flags.tsv
+    separator: "\t"
+  qc_criteria:
+    path: align.qc_criteria.tsv
+    separator: "\t"
+views:
+  qc_metrics:
+    dataset: qc_metrics
+    desc: Alignment QC metrics
+    render-table:
+      columns:
+        sample_id:
+          label: Sample ID
+          display-mode: pinned
+  qc_flags:
+    dataset: qc_flags
+    desc: Alignment QC flags
+    render-table:
+      columns: {}
+  qc_criteria:
+    dataset: qc_criteria
+    desc: Alignment QC criteria
+    render-table:
+      columns: {}

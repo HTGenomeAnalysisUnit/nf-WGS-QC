@@ -1,0 +1,57 @@
+{
+    "dummy_project - qc_report - stub": {
+        "content": [
+            {
+                "0": [
+                    "test_project.datavzrd.yml:md5,d41d8cd98f00b204e9800998ecf8427e"
+                ],
+                "1": [
+                    "test_project.project_qc_summary.js:md5,d41d8cd98f00b204e9800998ecf8427e"
+                ],
+                "2": [
+                    "test_project.project_qc_summary.tsv:md5,d41d8cd98f00b204e9800998ecf8427e"
+                ],
+                "3": [
+                    "test_project.qc_flags_summary.tsv:md5,d41d8cd98f00b204e9800998ecf8427e"
+                ],
+                "4": [
+                    "test_project.qc_flags.tsv:md5,d41d8cd98f00b204e9800998ecf8427e"
+                ],
+                "5": [
+                    [
+                        "PREPARE_QC_REPORT",
+                        "prepar_qc_report",
+                        "1.0"
+                    ]
+                ],
+                "datavzrd_yml": [
+                    "test_project.datavzrd.yml:md5,d41d8cd98f00b204e9800998ecf8427e"
+                ],
+                "flags_summary_tsv": [
+                    "test_project.qc_flags_summary.tsv:md5,d41d8cd98f00b204e9800998ecf8427e"
+                ],
+                "flags_tsv": [
+                    "test_project.qc_flags.tsv:md5,d41d8cd98f00b204e9800998ecf8427e"
+                ],
+                "qc_summary_tsv": [
+                    "test_project.project_qc_summary.tsv:md5,d41d8cd98f00b204e9800998ecf8427e"
+                ],
+                "report_js": [
+                    "test_project.project_qc_summary.js:md5,d41d8cd98f00b204e9800998ecf8427e"
+                ],
+                "versions_prepareqcreport": [
+                    [
+                        "PREPARE_QC_REPORT",
+                        "prepar_qc_report",
+                        "1.0"
+                    ]
+                ]
+            }
+        ],
+        "timestamp": "2026-11-25T10:28:48.149098935",
+        "meta": {
+            "nf-test": "0.9.5",
+            "nextflow": "26.04.6"
+        }
+    }
+}

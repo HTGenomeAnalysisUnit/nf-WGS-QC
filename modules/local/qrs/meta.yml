@@ -1,74 +1,88 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/modules/meta-schema.json
-# # TODO nf-core: Add a description of the module and list keywords
 name: "qrs"
-description: write your description here
+description: Compute fast sequencing run, flowcell, lane, base quality, and GC statistics from BAM/CRAM files using quick_reads_stats
 keywords:
-  - sort
-  - example
-  - genomics
+  - bam
+  - cram
+  - read stats
+  - sequencing runs
+  - alignment qc
 tools:
-  ## TODO nf-core: Add a description and other details for the software below
-  - "qrs":
-      description: ""
-      homepage: ""
-      documentation: ""
-      tool_dev_url: ""
+  - quick_reads_stats:
+      description: Rapid extraction of sequencing run, flowcell, lane, base quality, and GC metrics from BAM/CRAM files
+      homepage: https://github.com/HTGenomeAnalysisUnit/quick_reads_stats
+      documentation: https://github.com/HTGenomeAnalysisUnit/quick_reads_stats
+      tool_dev_url: https://github.com/HTGenomeAnalysisUnit/quick_reads_stats
       doi: ""
-      licence: null
-      identifier: null
-
+      licence:
+        - "MIT"
+      identifier: ""
 input:
-  ### TODO nf-core: Add a description of all of the variables used as input
   - - meta:
         type: map
-        description: |
-          Groovy Map containing sample information
-          e.g. `[ id:'sample1' ]`
+        description: Groovy Map containing sample information, e.g. `[ id:'sample1' ]`
     - bam:
         type: file
-        description: Sorted BAM/CRAM/SAM file
-        pattern: "*.{bam,cram,sam}"
+        description: Input BAM or CRAM alignment file
+        pattern: "*.{bam,cram}"
         ontologies:
-          - edam: "http://edamontology.org/format_2572" # BAM
-          - edam: "http://edamontology.org/format_2573" # CRAM
-          - edam: "http://edamontology.org/format_3462" # SAM
-
+          - edam: http://edamontology.org/format_2572 # BAM
+          - edam: http://edamontology.org/format_3462 # CRAM
+    - bai:
+        type: file
+        description: Index file corresponding to the input BAM or CRAM file
+        pattern: "*.{bai,crai}"
+        ontologies: []
 output:
-  ### TODO nf-core: Add a description of all of the variables used as output
-  bam:
+  per_sample_run:
     - - meta:
           type: map
-          description: |
-            Groovy Map containing sample information
-            e.g. `[ id:'sample1' ]`
-      - "*.bam":
+          description: Groovy Map containing sample information, e.g. `[ id:'sample1' ]`
+      - "*.per_sample_run.tsv":
           type: file
-          description: Sorted BAM/CRAM/SAM file
-          pattern: "*.{bam,cram,sam}"
+          description: Per-sample summary of sequencing runs, flowcells, and lanes
+          pattern: "*.per_sample_run.tsv"
           ontologies:
-            - edam: "http://edamontology.org/format_2572" # BAM
-            - edam: "http://edamontology.org/format_2573" # CRAM
-            - edam: "http://edamontology.org/format_3462" # SAM
+            - edam: http://edamontology.org/format_3475 # TSV
+  rundetails:
+    - - meta:
+          type: map
+          description: Groovy Map containing sample information, e.g. `[ id:'sample1' ]`
+      - "*.rundetails.tsv":
+          type: file
+          description: Detailed breakdown of reads per sequencing run, flowcell, and lane
+          pattern: "*.rundetails.tsv"
+          ontologies:
+            - edam: http://edamontology.org/format_3475 # TSV
+  read_stats:
+    - - meta:
+          type: map
+          description: Groovy Map containing sample information, e.g. `[ id:'sample1' ]`
+      - "*.read_stats.tsv":
+          type: file
+          description: Per-sample read base quality and GC percentage summary statistics
+          pattern: "*.read_stats.tsv"
+          ontologies:
+            - edam: http://edamontology.org/format_3475 # TSV
   versions_qrs:
-    - - "${task.process}":
+    - - ${task.process}:
           type: string
           description: The name of the process
-      - "qrs":
+      - quick_reads_stats:
           type: string
           description: The name of the tool
-      - "qrs --version":
+      - "qrs --help | head -1 | sed 's/.\\+VERSION //'":
           type: eval
           description: The expression to obtain the version of the tool
-
 topics:
   versions:
     - - ${task.process}:
           type: string
           description: The name of the process
-      - qrs:
+      - quick_reads_stats:
           type: string
           description: The name of the tool
-      - qrs --version:
+      - "qrs --help | head -1 | sed 's/.\\+VERSION //'":
           type: eval
           description: The expression to obtain the version of the tool
 authors:

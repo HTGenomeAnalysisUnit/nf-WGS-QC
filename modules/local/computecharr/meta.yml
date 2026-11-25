@@ -1,74 +1,70 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/modules/meta-schema.json
-# # TODO nf-core: Add a description of the module and list keywords
 name: "computecharr"
-description: write your description here
+description: Estimate DNA sample contamination from a VCF/BCF file using the CHARR estimator implemented in sceVCF
 keywords:
-  - sort
-  - example
-  - genomics
+  - contamination
+  - charr
+  - scevcf
+  - vcf
+  - variant qc
 tools:
-  ## TODO nf-core: Add a description and other details for the software below
-  - "computecharr":
-      description: ""
-      homepage: ""
-      documentation: ""
-      tool_dev_url: ""
+  - sceVCF:
+      description: Fast implementation of the CHARR DNA contamination estimator on VCF/BCF files
+      homepage: https://github.com/HTGenomeAnalysisUnit/sce-vcf
+      documentation: https://github.com/HTGenomeAnalysisUnit/sce-vcf
+      tool_dev_url: https://github.com/HTGenomeAnalysisUnit/sce-vcf
       doi: ""
-      licence: null
-      identifier: null
-
+      licence:
+        - "MIT"
+      identifier: ""
 input:
-  ### TODO nf-core: Add a description of all of the variables used as input
   - - meta:
         type: map
-        description: |
-          Groovy Map containing sample information
-          e.g. `[ id:'sample1' ]`
-    - bam:
+        description: Groovy Map containing sample information, e.g. `[ id:'sample1' ]`
+    - vcf:
         type: file
-        description: Sorted BAM/CRAM/SAM file
-        pattern: "*.{bam,cram,sam}"
+        description: Indexed VCF or BCF file annotated with population allele frequencies
+        pattern: "*.{vcf.gz,bcf}"
         ontologies:
-          - edam: "http://edamontology.org/format_2572" # BAM
-          - edam: "http://edamontology.org/format_2573" # CRAM
-          - edam: "http://edamontology.org/format_3462" # SAM
-
+          - edam: http://edamontology.org/format_3016 # VCF
+    - vcf_index:
+        type: file
+        description: Index file (TBI or CSI) for the input VCF/BCF file
+        pattern: "*.{tbi,csi}"
+        ontologies: []
+  - af_field:
+      type: string
+      description: Name of the INFO field containing population allele frequencies (e.g. 'gnomad_af' or 'AF')
 output:
-  ### TODO nf-core: Add a description of all of the variables used as output
-  bam:
+  charr_stats:
     - - meta:
           type: map
-          description: |
-            Groovy Map containing sample information
-            e.g. `[ id:'sample1' ]`
-      - "*.bam":
+          description: Groovy Map containing sample information, e.g. `[ id:'sample1' ]`
+      - "*.charr.tsv":
           type: file
-          description: Sorted BAM/CRAM/SAM file
-          pattern: "*.{bam,cram,sam}"
+          description: TSV report with CHARR contamination estimate, heterozygosity rate, and allele-balance metrics
+          pattern: "*.charr.tsv"
           ontologies:
-            - edam: "http://edamontology.org/format_2572" # BAM
-            - edam: "http://edamontology.org/format_2573" # CRAM
-            - edam: "http://edamontology.org/format_3462" # SAM
+            - edam: http://edamontology.org/format_3475 # TSV
   versions_computecharr:
-    - - "${task.process}":
+    - - ${task.process}:
           type: string
           description: The name of the process
-      - "computecharr":
+      - compute_charr:
           type: string
           description: The name of the tool
-      - "computecharr --version":
+      - "sceVCF --help 2>1 | head 1 | sed 's/.\\+v//'":
           type: eval
           description: The expression to obtain the version of the tool
-
 topics:
   versions:
     - - ${task.process}:
           type: string
           description: The name of the process
-      - computecharr:
+      - compute_charr:
           type: string
           description: The name of the tool
-      - computecharr --version:
+      - "sceVCF --help 2>1 | head 1 | sed 's/.\\+v//'":
           type: eval
           description: The expression to obtain the version of the tool
 authors:

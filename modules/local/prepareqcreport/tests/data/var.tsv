@@ -1,0 +1,4 @@
+sample_id	vcf_sample_id	QC_status	charr
+sampleid_section	sampleid_section	qc_section	charr
+S1	V1	PASS	0.002
+S2	V2	WARN	0.015

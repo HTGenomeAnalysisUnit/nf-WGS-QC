@@ -1,74 +1,143 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/modules/meta-schema.json
-# # TODO nf-core: Add a description of the module and list keywords
 name: "summarisealignqc"
-description: write your description here
+description: Aggregate alignment QC metrics across samples into JSON, summary TSV, QC flag tables, and a datavzrd YAML config
 keywords:
-  - sort
-  - example
-  - genomics
+  - alignment qc
+  - summary
+  - datavzrd
+  - samtools
+  - mosdepth
+  - somalier
+  - verifybamid
 tools:
-  ## TODO nf-core: Add a description and other details for the software below
-  - "summarisealignqc":
-      description: ""
-      homepage: ""
-      documentation: ""
-      tool_dev_url: ""
+  - summarise_align_qc:
+      description: Python script aggregating alignment QC manifests and Somalier reports, evaluating user-defined QC rules, and generating datavzrd configs
+      homepage: https://github.com/HTGenomeAnalysisUnit/nf-WGS-QC
+      documentation: https://github.com/HTGenomeAnalysisUnit/nf-WGS-QC
+      tool_dev_url: https://github.com/HTGenomeAnalysisUnit/nf-WGS-QC
       doi: ""
-      licence: null
-      identifier: null
-
+      licence:
+        - "MIT"
+      identifier: ""
 input:
-  ### TODO nf-core: Add a description of all of the variables used as input
-  - - meta:
-        type: map
-        description: |
-          Groovy Map containing sample information
-          e.g. `[ id:'sample1' ]`
-    - bam:
-        type: file
-        description: Sorted BAM/CRAM/SAM file
-        pattern: "*.{bam,cram,sam}"
-        ontologies:
-          - edam: "http://edamontology.org/format_2572" # BAM
-          - edam: "http://edamontology.org/format_2573" # CRAM
-          - edam: "http://edamontology.org/format_3462" # SAM
-
+  - project_id:
+      type: string
+      description: Project identifier used as prefix for output files
+  - target_depths:
+      type: string
+      description: Comma-separated depth thresholds to extract from mosdepth distributions (e.g. '10,20,30')
+  - target_base_qualities:
+      type: string
+      description: Comma-separated base quality thresholds to compute from samtools stats (e.g. '30')
+  - align_qc_flags:
+      type: file
+      description: YAML file specifying fail_rules and warning_rules for alignment QC
+      pattern: "*.{yml,yaml}"
+      ontologies:
+        - edam: http://edamontology.org/format_3750 # YAML
+  - somalier_ancestry:
+      type: file
+      description: Somalier ancestry TSV report
+      pattern: "*.tsv"
+      ontologies:
+        - edam: http://edamontology.org/format_3475 # TSV
+  - somalier_pairs:
+      type: file
+      description: Somalier pairwise relatedness TSV report
+      pattern: "*.tsv"
+      ontologies:
+        - edam: http://edamontology.org/format_3475 # TSV
+  - somalier_samples:
+      type: file
+      description: Somalier per-sample TSV report
+      pattern: "*.tsv"
+      ontologies:
+        - edam: http://edamontology.org/format_3475 # TSV
+  - mosdepth_inputs:
+      type: file
+      description: Manifest TSV listing per-sample mosdepth summary and distribution files
+      pattern: "*.tsv"
+      ontologies:
+        - edam: http://edamontology.org/format_3475 # TSV
+  - samtools_idxstats_inputs:
+      type: file
+      description: Manifest TSV listing per-sample samtools idxstats files
+      pattern: "*.tsv"
+      ontologies:
+        - edam: http://edamontology.org/format_3475 # TSV
+  - samtools_stats_inputs:
+      type: file
+      description: Manifest TSV listing per-sample samtools stats files
+      pattern: "*.tsv"
+      ontologies:
+        - edam: http://edamontology.org/format_3475 # TSV
+  - verifybamid_inputs:
+      type: file
+      description: Manifest TSV listing per-sample VerifyBamID2 selfSM files
+      pattern: "*.tsv"
+      ontologies:
+        - edam: http://edamontology.org/format_3475 # TSV
+  - qrs_inputs:
+      type: file
+      description: Manifest TSV listing per-sample quick_reads_stats files
+      pattern: "*.tsv"
+      ontologies:
+        - edam: http://edamontology.org/format_3475 # TSV
 output:
-  ### TODO nf-core: Add a description of all of the variables used as output
-  bam:
-    - - meta:
-          type: map
-          description: |
-            Groovy Map containing sample information
-            e.g. `[ id:'sample1' ]`
-      - "*.bam":
-          type: file
-          description: Sorted BAM/CRAM/SAM file
-          pattern: "*.{bam,cram,sam}"
-          ontologies:
-            - edam: "http://edamontology.org/format_2572" # BAM
-            - edam: "http://edamontology.org/format_2573" # CRAM
-            - edam: "http://edamontology.org/format_3462" # SAM
+  qc_report_tsv:
+    - "*-align_qc.tsv":
+        type: file
+        description: Two-header summary TSV table of alignment QC metrics and status per sample
+        pattern: "*-align_qc.tsv"
+        ontologies:
+          - edam: http://edamontology.org/format_3475 # TSV
+  qc_report_json:
+    - "*-align_qc.json":
+        type: file
+        description: Detailed nested JSON report of all alignment QC metrics per sample
+        pattern: "*-align_qc.json"
+        ontologies:
+          - edam: http://edamontology.org/format_3464 # JSON
+  qc_flags:
+    - "*-align_qc.qc_flags.tsv":
+        type: file
+        description: Binary QC flag indicator matrix and overall QC_status per sample
+        pattern: "*-align_qc.qc_flags.tsv"
+        ontologies:
+          - edam: http://edamontology.org/format_3475 # TSV
+  qc_criteria:
+    - "*-align_qc.qc_criteria.tsv":
+        type: file
+        description: Table describing configured alignment QC fail and warning rules
+        pattern: "*-align_qc.qc_criteria.tsv"
+        ontologies:
+          - edam: http://edamontology.org/format_3475 # TSV
+  datavzrd_yml:
+    - "*-align_qc.qc_align_datavzrd.yml":
+        type: file
+        description: Datavzrd YAML configuration for alignment QC tables
+        pattern: "*-align_qc.qc_align_datavzrd.yml"
+        ontologies:
+          - edam: http://edamontology.org/format_3750 # YAML
   versions_summarisealignqc:
-    - - "${task.process}":
+    - - ${task.process}:
           type: string
           description: The name of the process
-      - "summarisealignqc":
+      - summarise_align_qc:
           type: string
           description: The name of the tool
-      - "summarisealignqc --version":
+      - "summarise_align_qc.py --version":
           type: eval
           description: The expression to obtain the version of the tool
-
 topics:
   versions:
     - - ${task.process}:
           type: string
           description: The name of the process
-      - summarisealignqc:
+      - summarise_align_qc:
           type: string
           description: The name of the tool
-      - summarisealignqc --version:
+      - "summarise_align_qc.py --version":
           type: eval
           description: The expression to obtain the version of the tool
 authors:
