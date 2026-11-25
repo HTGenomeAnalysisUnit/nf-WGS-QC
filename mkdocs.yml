@@ -1,0 +1,65 @@
+site_name: nf-WGS-QC
+site_description: Whole Genome Sequencing quality control Nextflow pipeline
+site_url: https://htgenomeanalysisunit.github.io/nf-WGS-QC/
+repo_url: https://github.com/HTGenomeAnalysisUnit/nf-WGS-QC
+repo_name: HTGenomeAnalysisUnit/nf-WGS-QC
+
+theme:
+  name: material
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: teal
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: teal
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.code.annotate
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - tables
+  - toc:
+      permalink: true
+
+nav:
+  - Overview: index.md
+  - Usage:
+      - Inputs & Samplesheets: usage/inputs.md
+      - Running the Pipeline: usage/running.md
+      - Parameters Reference: usage/parameters.md
+  - Workflows:
+      - Alignment QC: workflows/alignments_qc.md
+      - Variant QC: workflows/variants_qc.md
+      - Cohort QC Reporting: workflows/make_reports.md
+  - Reference:
+      - QC Criteria & Flags: reference/qc_criteria.md
+      - Output Structure: reference/outputs.md
+      - QC Reports Schema: qc_reports_schema.md
+  - Development:
+      - Testing & Local Docs: development/testing.md
